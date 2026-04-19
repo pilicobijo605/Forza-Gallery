@@ -1,0 +1,206 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Subir foto — ForzaGram</title>
+  <link rel="stylesheet" href="/css/style.css" />
+</head>
+<body>
+
+  <nav class="navbar">
+    <a href="/index.html" class="navbar-brand">FORZA<span class="brand-dot"></span>GRAM</a>
+    <ul class="navbar-links" id="nav-auth"></ul>
+  </nav>
+
+  <div class="teal-divider"></div>
+
+  <main>
+    <div class="form-container">
+      <div class="form-header">
+        <h1 class="form-title">Subir foto</h1>
+        <p class="form-sub">Comparte tu captura de Forza Horizon</p>
+      </div>
+
+      <form class="form" id="upload-form">
+
+        <div class="form-group">
+          <label>Imagen</label>
+          <div class="upload-zone" id="upload-zone">
+            <input type="file" id="file-input" accept="image/*" required />
+            <span class="upload-icon">📷</span>
+            <p class="upload-text">
+              <strong>Haz clic para seleccionar</strong> o arrastra aquí<br>
+              <small>JPG, PNG, WEBP — máx 10 MB</small>
+            </p>
+            <div class="upload-preview" id="preview" style="display:none">
+              <img id="preview-img" src="" alt="Preview" />
+            </div>
+          </div>
+        </div>
+
+        <div class="form-group">
+          <label for="titulo">Título</label>
+          <input type="text" id="titulo" placeholder="Ej: Atardecer en México" required maxlength="200" />
+        </div>
+
+        <div class="form-group">
+          <label for="juego">Juego</label>
+          <select id="juego" required>
+            <option value="" disabled selected>Selecciona el juego</option>
+            <option value="FH1">Forza Horizon 1 (2012)</option>
+            <option value="FH2">Forza Horizon 2 (2014)</option>
+            <option value="FH3">Forza Horizon 3 (2016)</option>
+            <option value="FH4">Forza Horizon 4 (2018)</option>
+            <option value="FH5">Forza Horizon 5 (2021)</option>
+          </select>
+        </div>
+
+        <div class="form-group">
+          <label>Etiquetas <small style="text-transform:none;font-size:0.8em;letter-spacing:0">(opcional)</small></label>
+          <div class="tag-input-wrapper" id="tag-wrapper">
+            <input
+              type="text"
+              class="tag-input-field"
+              id="tag-input"
+              placeholder="#etiqueta — pulsa Espacio o Enter para añadir"
+              autocomplete="off"
+            />
+          </div>
+          <input type="hidden" id="tags-hidden" name="tags" />
+        </div>
+
+        <div class="form-group">
+          <label for="descripcion">Descripción <small style="text-transform:none;font-size:0.8em;letter-spacing:0">(opcional)</small></label>
+          <textarea id="descripcion" rows="3" placeholder="Cuéntanos algo sobre la foto..."></textarea>
+        </div>
+
+        <div class="form-actions">
+          <button type="submit" class="btn btn-primary" id="submit-btn">Subir foto</button>
+          <a href="/galeria.html" class="btn btn-ghost">Cancelar</a>
+        </div>
+      </form>
+    </div>
+  </main>
+
+  <div class="teal-divider"></div>
+  <footer class="footer">ForzaGram &nbsp;·&nbsp; Comunidad Forza Horizon</footer>
+
+  <script src="/js/api.js"></script>
+  <script src="/js/toast.js"></script>
+  <script>
+    requireAuth("/login.html");
+    updateNavAuth();
+
+    const zone      = document.getElementById("upload-zone");
+    const fileInput = document.getElementById("file-input");
+    const preview   = document.getElementById("preview");
+    const previewImg = document.getElementById("preview-img");
+
+    zone.addEventListener("click", (e) => { if (!e.target.closest(".upload-preview")) fileInput.click(); });
+    zone.addEventListener("dragover",  (e) => { e.preventDefault(); zone.classList.add("drag-over"); });
+    zone.addEventListener("dragleave", () => zone.classList.remove("drag-over"));
+    zone.addEventListener("drop", (e) => {
+      e.preventDefault();
+      zone.classList.remove("drag-over");
+      if (e.dataTransfer.files[0]) setFile(e.dataTransfer.files[0]);
+    });
+    fileInput.addEventListener("change", () => { if (fileInput.files[0]) setFile(fileInput.files[0]); });
+
+    function setFile(file) {
+      const dt = new DataTransfer();
+      dt.items.add(file);
+      fileInput.files = dt.files;
+      previewImg.src = URL.createObjectURL(file);
+      preview.style.display = "block";
+    }
+
+    /* ── Tag chips ── */
+    const tagWrapper  = document.getElementById("tag-wrapper");
+    const tagInput    = document.getElementById("tag-input");
+    const tagsHidden  = document.getElementById("tags-hidden");
+    const activeTags  = new Set();
+
+    tagWrapper.addEventListener("click", () => tagInput.focus());
+
+    tagInput.addEventListener("keydown", (e) => {
+      if (e.key === " " || e.key === "Enter") {
+        e.preventDefault();
+        addTag(tagInput.value);
+      } else if (e.key === "Backspace" && tagInput.value === "") {
+        removeLastTag();
+      }
+    });
+
+    tagInput.addEventListener("blur", () => addTag(tagInput.value));
+
+    function normalizeTag(raw) {
+      return raw.replace(/^#+/, "").trim().toLowerCase().replace(/\s+/g, "");
+    }
+
+    function addTag(raw) {
+      const name = normalizeTag(raw);
+      if (!name || activeTags.has(name)) { tagInput.value = ""; return; }
+      activeTags.add(name);
+      tagInput.value = "";
+      renderChips();
+      syncHidden();
+    }
+
+    function removeTag(name) {
+      activeTags.delete(name);
+      renderChips();
+      syncHidden();
+    }
+
+    function removeLastTag() {
+      const last = [...activeTags].at(-1);
+      if (last) removeTag(last);
+    }
+
+    function renderChips() {
+      tagWrapper.querySelectorAll(".tag-chip").forEach(c => c.remove());
+      [...activeTags].forEach(name => {
+        const chip = document.createElement("span");
+        chip.className = "tag-chip";
+        chip.innerHTML = `#${name} <button type="button" aria-label="Eliminar">&times;</button>`;
+        chip.querySelector("button").addEventListener("click", () => removeTag(name));
+        tagWrapper.insertBefore(chip, tagInput);
+      });
+    }
+
+    function syncHidden() {
+      tagsHidden.value = [...activeTags].map(t => `#${t}`).join(" ");
+    }
+
+    /* ── Submit ── */
+    document.getElementById("upload-form").addEventListener("submit", async (e) => {
+      e.preventDefault();
+      const btn  = document.getElementById("submit-btn");
+      const file = fileInput.files[0];
+      if (!file) { showToast("Selecciona una imagen", "warning"); return; }
+
+      const fd = new FormData();
+      fd.append("file", file);
+      fd.append("titulo", document.getElementById("titulo").value.trim());
+      fd.append("juego", document.getElementById("juego").value);
+      const desc = document.getElementById("descripcion").value.trim();
+      if (desc) fd.append("descripcion", desc);
+      if (tagsHidden.value) fd.append("tags", tagsHidden.value);
+
+      btn.disabled = true;
+      btn.textContent = "Subiendo...";
+
+      try {
+        await uploadImagen(fd);
+        showToast("¡Foto subida con éxito!", "success");
+        setTimeout(() => window.location.href = "/galeria.html", 1200);
+      } catch(err) {
+        showToast(err.message, "error");
+        btn.disabled = false;
+        btn.textContent = "Subir foto";
+      }
+    });
+  </script>
+</body>
+</html>

@@ -1,0 +1,237 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Galería — ForzaGram</title>
+  <link rel="stylesheet" href="/css/style.css" />
+</head>
+<body>
+
+  <nav class="navbar">
+    <a href="/index.html" class="navbar-brand">FORZA<span class="brand-dot"></span>GRAM</a>
+    <ul class="navbar-links" id="nav-auth"></ul>
+  </nav>
+
+  <div class="teal-divider"></div>
+
+  <main>
+    <div class="page-header">
+      <div class="page-header-top">
+        <h1 class="page-title">Galería</h1>
+        <span class="page-count" id="count-label"></span>
+      </div>
+    </div>
+
+    <div class="filter-bar">
+      <button class="filter-btn active" data-juego="">Todos</button>
+      <button class="filter-btn" data-juego="FH1">FH1</button>
+      <button class="filter-btn" data-juego="FH2">FH2</button>
+      <button class="filter-btn" data-juego="FH3">FH3</button>
+      <button class="filter-btn" data-juego="FH4">FH4</button>
+      <button class="filter-btn" data-juego="FH5">FH5</button>
+    </div>
+
+    <div class="tag-filter-bar" id="tag-filter-bar" style="display:none">
+      <span class="tag-filter-active">
+        <span id="tag-filter-text"></span>
+        <button id="tag-filter-clear" title="Quitar filtro">✕</button>
+      </span>
+    </div>
+
+    <div class="gallery-grid" id="gallery"></div>
+  </main>
+
+  <div class="lightbox" id="lightbox">
+    <button class="lightbox-close" id="lb-close">✕</button>
+    <img id="lb-img" src="" alt="" />
+    <div class="lightbox-info">
+      <div class="lightbox-title" id="lb-title"></div>
+      <div class="lightbox-desc"  id="lb-desc"></div>
+      <div style="display:flex;gap:.5rem;align-items:center;justify-content:center;flex-wrap:wrap;margin-top:.5rem">
+        <span class="juego-badge" id="lb-juego"></span>
+        <div class="tags-row" id="lb-tags"></div>
+      </div>
+    </div>
+  </div>
+
+  <div class="teal-divider" style="margin-top:auto"></div>
+  <footer class="footer">ForzaGram &nbsp;·&nbsp; Comunidad Forza Horizon</footer>
+
+  <script src="/js/api.js"></script>
+  <script src="/js/toast.js"></script>
+  <script>
+    updateNavAuth();
+
+    let currentJuego = "";
+    let currentTag   = new URLSearchParams(location.search).get("tag") || "";
+    let currentUser  = null;
+
+    async function loadUser() {
+      if (isLoggedIn()) {
+        try { currentUser = await fetchMe(); } catch { currentUser = null; }
+      }
+    }
+
+    function formatDate(iso) {
+      return new Date(iso).toLocaleDateString("es-ES", { day:"2-digit", month:"short", year:"numeric" });
+    }
+
+    function setTagFilter(tag) {
+      currentTag = tag;
+      const bar   = document.getElementById("tag-filter-bar");
+      const label = document.getElementById("tag-filter-text");
+      if (tag) {
+        bar.style.display = "flex";
+        label.textContent = `#${tag}`;
+      } else {
+        bar.style.display = "none";
+      }
+      loadGallery();
+    }
+
+    document.getElementById("tag-filter-clear").addEventListener("click", () => {
+      history.replaceState(null, "", location.pathname);
+      setTagFilter("");
+    });
+
+    if (currentTag) setTagFilter(currentTag);
+
+    function renderSkeletons() {
+      const grid = document.getElementById("gallery");
+      grid.innerHTML = Array(8).fill(`
+        <div class="img-card skeleton-card">
+          <div class="skeleton" style="width:100%;height:100%;position:absolute;inset:0"></div>
+        </div>
+      `).join("");
+    }
+
+    function tagsHtml(tags) {
+      if (!tags || !tags.length) return "";
+      return tags.map(t => `<span class="hashtag" data-tag="${t}">#${t}</span>`).join("");
+    }
+
+    function openLightbox(img) {
+      document.getElementById("lb-img").src  = `/uploads/${img.filename}`;
+      document.getElementById("lb-img").alt  = img.titulo;
+      document.getElementById("lb-title").textContent = img.titulo;
+      document.getElementById("lb-desc").textContent  = img.descripcion || "";
+      const badge = document.getElementById("lb-juego");
+      badge.textContent = img.juego;
+      badge.className = `juego-badge ${img.juego}`;
+      const lbTags = document.getElementById("lb-tags");
+      lbTags.innerHTML = (img.tags || []).map(t =>
+        `<span class="hashtag" data-tag="${t}">#${t}</span>`
+      ).join("");
+      lbTags.querySelectorAll(".hashtag").forEach(el =>
+        el.addEventListener("click", () => {
+          closeLightbox();
+          history.replaceState(null, "", `?tag=${el.dataset.tag}`);
+          setTagFilter(el.dataset.tag);
+        })
+      );
+      document.getElementById("lightbox").classList.add("open");
+    }
+
+    function closeLightbox() {
+      document.getElementById("lightbox").classList.remove("open");
+    }
+
+    document.getElementById("lb-close").addEventListener("click", closeLightbox);
+    document.getElementById("lightbox").addEventListener("click", (e) => {
+      if (e.target === document.getElementById("lightbox")) closeLightbox();
+    });
+
+    async function deleteCard(id) {
+      if (!confirm("¿Eliminar esta imagen?")) return;
+      try {
+        await deleteImagen(id);
+        showToast("Imagen eliminada", "success");
+        loadGallery();
+      } catch(e) {
+        showToast(e.message, "error");
+      }
+    }
+
+    async function loadGallery() {
+      renderSkeletons();
+      try {
+        const params = new URLSearchParams({ skip: 0, limit: 60 });
+        if (currentJuego) params.set("juego", currentJuego);
+        if (currentTag)   params.set("tag",   currentTag);
+        const imagenes = await apiFetch(`/imagenes?${params}`);
+
+        const grid = document.getElementById("gallery");
+        document.getElementById("count-label").textContent =
+          `${imagenes.length} imagen${imagenes.length !== 1 ? "es" : ""}`;
+
+        if (!imagenes.length) {
+          grid.innerHTML = `<div class="state-box">
+            <span class="state-icon">🏎</span>
+            <p>No hay imágenes${currentTag ? ` con #${currentTag}` : ""}.<br>¡Sé el primero en subir una!</p>
+          </div>`;
+          return;
+        }
+
+        grid.innerHTML = imagenes.map((img, i) => `
+          <div class="img-card fade-in" style="animation-delay:${i * 0.03}s" data-id="${img.id}">
+            <img class="img-thumb" src="/uploads/${img.filename}" alt="${img.titulo}" loading="lazy"
+              onerror="this.style.display='none'">
+            ${currentUser && currentUser.id === img.usuario_id
+              ? `<button class="img-delete-btn" data-id="${img.id}" title="Eliminar">🗑</button>`
+              : ""}
+            <div class="card-overlay">
+              <div class="img-meta">
+                <span class="juego-badge ${img.juego}">${img.juego}</span>
+                <span class="img-date">${formatDate(img.created_at)}</span>
+              </div>
+              <div class="img-title">${img.titulo}</div>
+              <div class="tags-row">${tagsHtml(img.tags)}</div>
+            </div>
+          </div>
+        `).join("");
+
+        grid.querySelectorAll(".hashtag").forEach(el => {
+          el.addEventListener("click", (e) => {
+            e.stopPropagation();
+            history.replaceState(null, "", `?tag=${el.dataset.tag}`);
+            setTagFilter(el.dataset.tag);
+          });
+        });
+
+        grid.querySelectorAll(".img-card").forEach(card => {
+          card.addEventListener("click", async (e) => {
+            if (e.target.closest(".img-delete-btn") || e.target.closest(".hashtag")) return;
+            try {
+              const img = await fetchImagen(card.dataset.id);
+              openLightbox(img);
+            } catch {}
+          });
+        });
+
+        grid.querySelectorAll(".img-delete-btn").forEach(btn => {
+          btn.addEventListener("click", (e) => {
+            e.stopPropagation();
+            deleteCard(btn.dataset.id);
+          });
+        });
+
+      } catch(e) {
+        document.getElementById("gallery").innerHTML =
+          `<div class="state-box"><span class="state-icon">⚠️</span><p>${e.message}</p></div>`;
+      }
+    }
+
+    document.querySelectorAll(".filter-btn").forEach(btn => {
+      btn.addEventListener("click", () => {
+        document.querySelectorAll(".filter-btn").forEach(b => b.classList.remove("active"));
+        btn.classList.add("active");
+        currentJuego = btn.dataset.juego;
+        loadGallery();
+      });
+    });
+
+    loadUser().then(loadGallery);
+  </script>
+</body>
+</html>

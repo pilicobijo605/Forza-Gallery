@@ -1,0 +1,94 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>ForzaGram — Comparte tu Forza Horizon</title>
+  <link rel="stylesheet" href="/css/style.css" />
+</head>
+<body>
+
+  <nav class="navbar">
+    <a href="/index.html" class="navbar-brand">
+      FORZA<span class="brand-dot"></span>GRAM
+    </a>
+    <ul class="navbar-links" id="nav-auth">
+      <li><a href="/galeria.html">Galería</a></li>
+      <li><a href="/login.html">Login</a></li>
+      <li><a href="/registro.html" class="nav-cta">Registro</a></li>
+    </ul>
+  </nav>
+
+  <div class="teal-divider"></div>
+
+  <main>
+    <section class="hero">
+      <p class="hero-eyebrow">Forza Horizon Community</p>
+      <h1 class="hero-title">FORZA<br><span class="accent">GRAM</span></h1>
+      <p class="hero-sub">
+        Sube y comparte tus mejores capturas de Forza Horizon.<br>
+        De FH1 a FH5, toda la saga en un lugar.
+      </p>
+
+      <div class="stats-row">
+        <div class="stat-card total">
+          <span class="stat-number" id="stat-total">—</span>
+          <span class="stat-label">Total</span>
+        </div>
+        <div class="stat-card fh1">
+          <span class="stat-number" id="stat-fh1">—</span>
+          <span class="stat-label">FH1</span>
+        </div>
+        <div class="stat-card fh2">
+          <span class="stat-number" id="stat-fh2">—</span>
+          <span class="stat-label">FH2</span>
+        </div>
+        <div class="stat-card fh3">
+          <span class="stat-number" id="stat-fh3">—</span>
+          <span class="stat-label">FH3</span>
+        </div>
+        <div class="stat-card fh4">
+          <span class="stat-number" id="stat-fh4">—</span>
+          <span class="stat-label">FH4</span>
+        </div>
+        <div class="stat-card fh5">
+          <span class="stat-number" id="stat-fh5">—</span>
+          <span class="stat-label">FH5</span>
+        </div>
+      </div>
+
+      <div class="hero-actions">
+        <a href="/galeria.html" class="btn btn-primary">Ver galería</a>
+        <a href="/subir.html"   class="btn btn-secondary">Subir foto</a>
+      </div>
+    </section>
+  </main>
+
+  <div class="teal-divider"></div>
+
+  <footer class="footer">
+    ForzaGram &nbsp;·&nbsp; Comunidad Forza Horizon
+  </footer>
+
+  <script src="/js/api.js"></script>
+  <script src="/js/toast.js"></script>
+  <script>
+    updateNavAuth();
+
+    async function loadStats() {
+      try {
+        const data = await fetchStats();
+        document.getElementById("stat-total").textContent = data.total;
+        ["FH1","FH2","FH3","FH4","FH5"].forEach(g => {
+          const el = document.getElementById(`stat-${g.toLowerCase()}`);
+          if (el) el.textContent = data.por_juego[g] ?? 0;
+        });
+      } catch {
+        document.querySelectorAll(".stat-number").forEach(el => el.textContent = "?");
+      }
+    }
+
+    loadStats();
+  </script>
+</body>
+</html>

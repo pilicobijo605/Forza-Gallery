@@ -1,0 +1,25 @@
+from datetime import datetime, timezone
+
+from sqlalchemy import DateTime, ForeignKey, String, Text
+from sqlalchemy.orm import Mapped, mapped_column, relationship
+
+from src.models.tag import Tag, imagen_tags
+
+from src.db.session import Base
+
+
+class Imagen(Base):
+    __tablename__ = "imagenes"
+
+    id: Mapped[int] = mapped_column(primary_key=True)
+    titulo: Mapped[str] = mapped_column(String(200))
+    juego: Mapped[str] = mapped_column(String(10))
+    descripcion: Mapped[str | None] = mapped_column(Text, nullable=True)
+    filename: Mapped[str] = mapped_column(String(255))
+    usuario_id: Mapped[int] = mapped_column(ForeignKey("usuarios.id"))
+    created_at: Mapped[datetime] = mapped_column(
+        DateTime(timezone=True), default=lambda: datetime.now(timezone.utc)
+    )
+
+    usuario: Mapped["Usuario"] = relationship(back_populates="imagenes")  # noqa: F821
+    tags: Mapped[list[Tag]] = relationship(secondary=imagen_tags, lazy="selectin")
