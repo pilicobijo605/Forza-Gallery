@@ -173,6 +173,42 @@ async function fetchMe() {
   return apiFetch("/auth/me");
 }
 
+async function toggleSeguir(username) {
+  return apiFetch(`/social/usuarios/${username}/seguir`, { method: "POST" });
+}
+
+async function getSeguidores(username) {
+  return apiFetch(`/social/usuarios/${username}/seguidores`);
+}
+
+async function getSiguiendo(username) {
+  return apiFetch(`/social/usuarios/${username}/siguiendo`);
+}
+
+async function toggleFavoritoUsuario(username) {
+  return apiFetch(`/social/usuarios/${username}/favorito`, { method: "POST" });
+}
+
+async function getMisFavoritosUsuarios() {
+  return apiFetch("/social/mis-favoritos-usuarios");
+}
+
+async function cambiarPassword(passwordActual, nuevaPassword) {
+  return apiFetch("/auth/cambiar-password", {
+    method: "PUT",
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify({ password_actual: passwordActual, nueva_password: nuevaPassword }),
+  });
+}
+
+async function eliminarCuenta(password) {
+  return apiFetch("/auth/cuenta", {
+    method: "DELETE",
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify({ password }),
+  });
+}
+
 function requireAuth(redirectTo = "/login.html") {
   if (!isLoggedIn()) {
     window.location.href = redirectTo;

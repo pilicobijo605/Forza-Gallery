@@ -1,0 +1,140 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Ajustes — Forza Gallery</title>
+  <link rel="stylesheet" href="/css/style.css?v=4" />
+</head>
+<body>
+
+  <nav class="navbar">
+    <a href="/index.html" class="navbar-brand">FORZA<span class="brand-dot"></span>GALLERY</a>
+    <ul class="navbar-links" id="nav-auth"></ul>
+  </nav>
+
+  <div class="teal-divider"></div>
+
+  <main style="max-width:520px;margin:0 auto;padding:2rem 1rem">
+
+    <div style="margin-bottom:1.5rem">
+      <a id="back-link" href="/perfil.html" class="btn" style="background:transparent;border:1px solid rgba(255,255,255,0.15);color:var(--muted);padding:0.4rem 1rem;font-size:0.85rem">← Volver al perfil</a>
+    </div>
+
+    <h1 class="page-title" style="margin-bottom:2rem">Ajustes de cuenta</h1>
+
+    <!-- Cambiar contraseña -->
+    <section style="margin-bottom:2.5rem">
+      <h2 style="font-family:var(--font-cond);letter-spacing:1px;font-size:1rem;color:var(--muted);text-transform:uppercase;margin-bottom:1rem">Cambiar contraseña</h2>
+      <div class="lb-edit-form" style="display:flex;border-top:none;margin-top:0;padding-top:0">
+        <input class="lb-edit-input" id="pwd-actual" type="password" placeholder="Contraseña actual" />
+        <input class="lb-edit-input" id="pwd-nueva" type="password" placeholder="Nueva contraseña (mín. 12 car.)" />
+        <input class="lb-edit-input" id="pwd-nueva2" type="password" placeholder="Repetir nueva contraseña" />
+        <div class="lb-edit-actions">
+          <button class="lb-edit-btn lb-edit-btn-save" id="btn-cambiar-pwd">Guardar contraseña</button>
+        </div>
+      </div>
+    </section>
+
+    <!-- Zona de peligro -->
+    <section>
+      <h2 style="font-family:var(--font-cond);letter-spacing:1px;font-size:1rem;color:#e33;text-transform:uppercase;margin-bottom:1rem">Zona de peligro</h2>
+      <div style="border:1px solid rgba(220,30,30,0.3);border-radius:var(--radius);padding:1.25rem;display:flex;flex-direction:column;gap:0.75rem">
+        <p style="color:var(--muted);font-size:0.88rem;margin:0">
+          Eliminar tu cuenta borrará permanentemente tu perfil, imágenes, comentarios y todos tus datos. Esta acción <strong style="color:var(--white)">no se puede deshacer</strong>.
+        </p>
+        <button class="lb-edit-btn" id="btn-eliminar-cuenta-show" style="background:#b91c1c;color:#fff;align-self:flex-start">
+          Eliminar mi cuenta
+        </button>
+      </div>
+    </section>
+
+    <!-- Confirmación eliminación -->
+    <div id="eliminar-confirm" style="display:none;margin-top:1.5rem;border:1px solid #e33;border-radius:var(--radius);padding:1.25rem">
+      <p style="color:var(--white);font-size:0.9rem;margin:0 0 1rem">
+        Introduce tu contraseña para confirmar que quieres eliminar tu cuenta:
+      </p>
+      <div class="lb-edit-form" style="display:flex;border-top:none;margin-top:0;padding-top:0">
+        <input class="lb-edit-input" id="pwd-eliminar" type="password" placeholder="Tu contraseña" />
+        <label style="display:flex;align-items:center;gap:0.5rem;font-size:0.85rem;color:var(--muted);cursor:pointer">
+          <input type="checkbox" id="check-confirmar" />
+          Entiendo que esta acción es irreversible
+        </label>
+        <div class="lb-edit-actions">
+          <button class="lb-edit-btn lb-edit-btn-cancel" id="btn-eliminar-cancel">Cancelar</button>
+          <button class="lb-edit-btn" id="btn-eliminar-confirm" style="background:#b91c1c;color:#fff" disabled>Eliminar cuenta</button>
+        </div>
+      </div>
+    </div>
+
+  </main>
+
+  <div class="teal-divider" style="margin-top:auto"></div>
+  <footer class="footer">Forza Gallery &nbsp;·&nbsp; Comunidad Forza Horizon</footer>
+
+  <script src="/js/api.js"></script>
+  <script src="/js/toast.js"></script>
+  <script>
+    requireAuth();
+    updateNavAuth();
+
+    fetchMe().then(me => {
+      document.getElementById("back-link").href = `/perfil.html?u=${me.username}`;
+    }).catch(() => {});
+
+    document.getElementById("btn-cambiar-pwd").addEventListener("click", async () => {
+      const actual  = document.getElementById("pwd-actual").value;
+      const nueva   = document.getElementById("pwd-nueva").value;
+      const nueva2  = document.getElementById("pwd-nueva2").value;
+      if (!actual || !nueva || !nueva2) { showToast("Rellena todos los campos", "error"); return; }
+      if (nueva !== nueva2) { showToast("Las contraseñas nuevas no coinciden", "error"); return; }
+      const btn = document.getElementById("btn-cambiar-pwd");
+      btn.disabled = true;
+      try {
+        await cambiarPassword(actual, nueva);
+        showToast("Contraseña actualizada correctamente", "success");
+        document.getElementById("pwd-actual").value = "";
+        document.getElementById("pwd-nueva").value  = "";
+        document.getElementById("pwd-nueva2").value = "";
+      } catch(e) {
+        showToast(e.message, "error");
+      } finally {
+        btn.disabled = false;
+      }
+    });
+
+    document.getElementById("btn-eliminar-cuenta-show").addEventListener("click", () => {
+      document.getElementById("eliminar-confirm").style.display = "block";
+      document.getElementById("btn-eliminar-cuenta-show").style.display = "none";
+    });
+
+    document.getElementById("btn-eliminar-cancel").addEventListener("click", () => {
+      document.getElementById("eliminar-confirm").style.display = "none";
+      document.getElementById("btn-eliminar-cuenta-show").style.display = "block";
+      document.getElementById("pwd-eliminar").value = "";
+      document.getElementById("check-confirmar").checked = false;
+      document.getElementById("btn-eliminar-confirm").disabled = true;
+    });
+
+    document.getElementById("check-confirmar").addEventListener("change", (e) => {
+      document.getElementById("btn-eliminar-confirm").disabled = !e.target.checked;
+    });
+
+    document.getElementById("btn-eliminar-confirm").addEventListener("click", async () => {
+      const pwd = document.getElementById("pwd-eliminar").value;
+      if (!pwd) { showToast("Introduce tu contraseña", "error"); return; }
+      const btn = document.getElementById("btn-eliminar-confirm");
+      btn.disabled = true;
+      try {
+        await eliminarCuenta(pwd);
+        clearToken();
+        showToast("Cuenta eliminada. ¡Hasta pronto!", "info");
+        setTimeout(() => { window.location.href = "/index.html"; }, 1500);
+      } catch(e) {
+        showToast(e.message, "error");
+        btn.disabled = false;
+      }
+    });
+  </script>
+</body>
+</html>

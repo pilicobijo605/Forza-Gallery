@@ -4,7 +4,7 @@
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
   <title>Perfil — Forza Gallery</title>
-  <link rel="stylesheet" href="/css/style.css?v=3" />
+  <link rel="stylesheet" href="/css/style.css?v=4" />
 </head>
 <body>
 
@@ -34,14 +34,23 @@
           <img id="perfil-avatar" src="/img/default-avatar.svg" alt="Avatar" class="perfil-avatar" />
         </div>
         <div class="perfil-info">
-          <h1 class="perfil-username" id="perfil-username"></h1>
-          <p class="perfil-bio" id="perfil-bio"></p>
-          <div class="perfil-meta">
-            <span id="perfil-fecha"></span>
-            <span id="perfil-count"></span>
+          <div class="perfil-info-top">
+            <h1 class="perfil-username" id="perfil-username"></h1>
+            <a href="/ajustes.html" class="perfil-settings-btn" id="perfil-settings-btn" style="display:none" title="Ajustes de cuenta">⚙</a>
           </div>
-          <div id="perfil-actions" style="display:none;margin-top:1rem">
+          <p class="perfil-bio" id="perfil-bio"></p>
+          <div class="perfil-stats">
+            <span class="perfil-stat-btn no-click"><strong id="perfil-count-num">0</strong><span>fotos</span></span>
+            <button class="perfil-stat-btn" id="btn-seguidores"><strong id="perfil-seguidores-num">0</strong><span>seguidores</span></button>
+            <button class="perfil-stat-btn" id="btn-siguiendo"><strong id="perfil-siguiendo-num">0</strong><span>siguiendo</span></button>
+          </div>
+          <div class="perfil-meta"><span id="perfil-fecha"></span></div>
+          <div id="perfil-actions" style="display:none;margin-top:0.75rem">
             <a href="/editar-perfil.html" class="btn btn-primary">Editar perfil</a>
+          </div>
+          <div class="perfil-follow-actions" id="perfil-follow-actions" style="display:none">
+            <button class="follow-btn" id="btn-seguir">Seguir</button>
+            <button class="favorito-btn" id="btn-favorito" title="Añadir a favoritos">⭐</button>
           </div>
         </div>
       </div>
@@ -60,6 +69,9 @@
             <path d="M19 21l-7-5-7 5V5a2 2 0 0 1 2-2h10a2 2 0 0 1 2 2z"/>
           </svg>
         </button>
+        <button class="perfil-tab" id="tab-btn-favoritos" data-tab="favoritos" style="display:none">
+          <svg viewBox="0 0 24 24" width="18" height="18" fill="currentColor"><path d="M12 2l3.09 6.26L22 9.27l-5 4.87 1.18 6.88L12 17.77l-6.18 3.25L7 14.14 2 9.27l6.91-1.01L12 2z"/></svg>
+        </button>
       </div>
 
       <div class="teal-divider" style="margin:0"></div>
@@ -71,6 +83,9 @@
           </div>
           <div class="perfil-tab-panel">
             <div class="gallery-grid" id="guardados-grid"></div>
+          </div>
+          <div class="perfil-tab-panel">
+            <div class="favoritos-grid" id="favoritos-grid"></div>
           </div>
         </div>
       </div>
@@ -167,6 +182,16 @@
     </div>
   </div>
 
+  <div class="user-modal-overlay" id="user-modal" style="display:none">
+    <div class="user-modal-box">
+      <div class="user-modal-header">
+        <span id="user-modal-title"></span>
+        <button class="user-modal-close" id="user-modal-close">✕</button>
+      </div>
+      <div class="user-modal-list" id="user-modal-list"></div>
+    </div>
+  </div>
+
   <div class="teal-divider" style="margin-top:auto"></div>
   <footer class="footer">Forza Gallery &nbsp;·&nbsp; Comunidad Forza Horizon</footer>
 
@@ -205,15 +230,26 @@
 
         const joined = new Date(perfil.created_at).toLocaleDateString("es-ES", { month: "long", year: "numeric" });
         document.getElementById("perfil-fecha").textContent = `Miembro desde ${joined}`;
-        document.getElementById("perfil-count").textContent = `${imagenes.length} imagen${imagenes.length !== 1 ? "es" : ""}`;
+        document.getElementById("perfil-count-num").textContent = imagenes.length;
+        document.getElementById("perfil-seguidores-num").textContent = perfil.seguidores ?? 0;
+        document.getElementById("perfil-siguiendo-num").textContent = perfil.siguiendo ?? 0;
 
         if (isLoggedIn()) {
           try { meUser = await fetchMe(); } catch {}
         }
         if (meUser && meUser.username === username) {
           document.getElementById("perfil-actions").style.display = "block";
+          document.getElementById("perfil-settings-btn").style.display = "flex";
           document.getElementById("tab-btn-guardados").style.display = "flex";
+          document.getElementById("tab-btn-favoritos").style.display = "flex";
           loadGuardados();
+          loadFavoritos();
+        } else if (meUser) {
+          const fa = document.getElementById("perfil-follow-actions");
+          fa.style.display = "flex";
+          const btnSeguir = document.getElementById("btn-seguir");
+          if (perfil.yo_sigo) { btnSeguir.textContent = "Siguiendo"; btnSeguir.classList.add("siguiendo"); }
+          if (perfil.es_favorito) document.getElementById("btn-favorito").classList.add("active");
         }
 
         const grid = document.getElementById("perfil-gallery");
@@ -390,12 +426,13 @@
       );
     }
 
+    const TAB_ORDER = ["fotos", "guardados", "favoritos"];
     document.querySelectorAll(".perfil-tab").forEach(btn => {
       btn.addEventListener("click", () => {
         document.querySelectorAll(".perfil-tab").forEach(b => b.classList.remove("active"));
         btn.classList.add("active");
-        const track = document.getElementById("perfil-tabs-track");
-        track.style.transform = btn.dataset.tab === "guardados" ? "translateX(-50%)" : "translateX(0)";
+        const idx = TAB_ORDER.indexOf(btn.dataset.tab);
+        document.getElementById("perfil-tabs-track").style.transform = `translateX(-${idx * 33.333}%)`;
       });
     });
 
@@ -549,6 +586,96 @@
         });
       } catch {
         grid.innerHTML = `<div class="state-box"><span class="state-icon">🔖</span><p>Aún no has guardado ninguna imagen.</p></div>`;
+      }
+    }
+
+    document.getElementById("btn-seguir")?.addEventListener("click", async () => {
+      if (!isLoggedIn()) { window.location.href = "/login.html"; return; }
+      try {
+        const res = await toggleSeguir(username);
+        const btn = document.getElementById("btn-seguir");
+        if (res.siguiendo) { btn.textContent = "Siguiendo"; btn.classList.add("siguiendo"); }
+        else { btn.textContent = "Seguir"; btn.classList.remove("siguiendo"); }
+        const perfil = await apiFetch(`/usuarios/${username}`);
+        document.getElementById("perfil-seguidores-num").textContent = perfil.seguidores;
+      } catch(e) { showToast(e.message, "error"); }
+    });
+
+    document.getElementById("btn-favorito")?.addEventListener("click", async () => {
+      if (!isLoggedIn()) { window.location.href = "/login.html"; return; }
+      try {
+        const res = await toggleFavoritoUsuario(username);
+        const btn = document.getElementById("btn-favorito");
+        btn.classList.toggle("active", res.es_favorito);
+        showToast(res.es_favorito ? "Añadido a favoritos" : "Eliminado de favoritos", res.es_favorito ? "success" : "info");
+      } catch(e) { showToast(e.message, "error"); }
+    });
+
+    async function openUserModal(titulo, loadFn) {
+      document.getElementById("user-modal-title").textContent = titulo;
+      document.getElementById("user-modal-list").innerHTML = `<div class="state-box" style="padding:2rem"><span class="state-icon">⏳</span></div>`;
+      document.getElementById("user-modal").style.display = "flex";
+      const users = await loadFn().catch(() => []);
+      const list = document.getElementById("user-modal-list");
+      if (!users.length) {
+        list.innerHTML = `<div class="state-box" style="padding:2rem"><p>Sin resultados</p></div>`;
+        return;
+      }
+      list.innerHTML = users.map(u => `
+        <div class="user-modal-item">
+          <img class="user-modal-avatar" src="${u.avatar_url || "/img/default-avatar.svg"}" alt="${u.username}" onerror="this.src='/img/default-avatar.svg'" />
+          <div class="user-modal-info">
+            <a class="user-modal-username" href="/perfil.html?u=${u.username}">@${u.username}</a>
+            <span class="user-modal-bio">${u.bio || ""}</span>
+          </div>
+          ${meUser && meUser.username !== u.username ? `
+            <button class="user-modal-follow-btn ${u.yo_sigo ? "siguiendo" : ""}" data-username="${u.username}">
+              ${u.yo_sigo ? "Siguiendo" : "Seguir"}
+            </button>` : ""}
+        </div>`).join("");
+      list.querySelectorAll(".user-modal-follow-btn").forEach(btn =>
+        btn.addEventListener("click", async () => {
+          try {
+            const res = await toggleSeguir(btn.dataset.username);
+            btn.textContent = res.siguiendo ? "Siguiendo" : "Seguir";
+            btn.classList.toggle("siguiendo", res.siguiendo);
+          } catch(e) { showToast(e.message, "error"); }
+        })
+      );
+    }
+
+    document.getElementById("btn-seguidores").addEventListener("click", () =>
+      openUserModal("Seguidores", () => getSeguidores(username))
+    );
+    document.getElementById("btn-siguiendo").addEventListener("click", () =>
+      openUserModal("Siguiendo", () => getSiguiendo(username))
+    );
+    document.getElementById("user-modal-close").addEventListener("click", () => {
+      document.getElementById("user-modal").style.display = "none";
+    });
+    document.getElementById("user-modal").addEventListener("click", (e) => {
+      if (e.target === document.getElementById("user-modal"))
+        document.getElementById("user-modal").style.display = "none";
+    });
+
+    async function loadFavoritos() {
+      const grid = document.getElementById("favoritos-grid");
+      try {
+        const users = await getMisFavoritosUsuarios();
+        if (!users.length) {
+          grid.innerHTML = `<div class="state-box"><span class="state-icon">⭐</span><p>Aún no tienes usuarios favoritos.</p></div>`;
+          return;
+        }
+        grid.innerHTML = users.map(u => `
+          <a class="favorito-user-card" href="/perfil.html?u=${u.username}">
+            <img src="${u.avatar_url || "/img/default-avatar.svg"}" alt="${u.username}" onerror="this.src='/img/default-avatar.svg'" />
+            <div class="favorito-user-card-info">
+              <span class="favorito-user-card-name">@${u.username}</span>
+              <span class="favorito-user-card-bio">${u.bio || ""}</span>
+            </div>
+          </a>`).join("");
+      } catch {
+        grid.innerHTML = `<div class="state-box"><span class="state-icon">⭐</span><p>Aún no tienes usuarios favoritos.</p></div>`;
       }
     }
 

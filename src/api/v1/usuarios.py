@@ -4,8 +4,10 @@ import cloudinary
 import cloudinary.uploader
 from fastapi import APIRouter, HTTPException, UploadFile, File, status
 
-from src.core.dependencies import CurrentActiveUser, DbSession
+from src.core.dependencies import CurrentActiveUser, DbSession, OptionalUser
 from src.db.repositories.usuario_repository import UsuarioRepository
+from src.db.repositories.seguidor_repository import SeguidorRepository
+from src.db.repositories.favorito_usuario_repository import FavoritoUsuarioRepository
 from src.schemas.usuario import PerfilOut, PerfilUpdate
 
 router = APIRouter(prefix="/usuarios", tags=["usuarios"])
@@ -15,14 +17,26 @@ MAX_AVATAR_SIZE = 5 * 1024 * 1024
 
 
 @router.get("/{username}", response_model=PerfilOut)
-async def get_perfil(username: str, db: DbSession):
+async def get_perfil(username: str, db: DbSession, viewer: OptionalUser):
     repo = UsuarioRepository(db)
     user = await repo.get_by_username(username)
     if not user:
         raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Usuario no encontrado")
     if not user.is_public:
         raise HTTPException(status_code=status.HTTP_403_FORBIDDEN, detail="Este perfil es privado")
-    return PerfilOut.model_validate(user)
+    seg_repo = SeguidorRepository(db)
+    fav_repo = FavoritoUsuarioRepository(db)
+    return PerfilOut(
+        username=user.username,
+        bio=user.bio,
+        avatar_url=user.avatar_url,
+        is_public=user.is_public,
+        created_at=user.created_at,
+        seguidores=await seg_repo.count_seguidores(user.id),
+        siguiendo=await seg_repo.count_siguiendo(user.id),
+        yo_sigo=await seg_repo.is_siguiendo(viewer.id, user.id) if viewer else False,
+        es_favorito=await fav_repo.is_favorito(viewer.id, user.id) if viewer else False,
+    )
 
 
 @router.put("/me", response_model=PerfilOut)

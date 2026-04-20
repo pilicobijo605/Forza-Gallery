@@ -5,7 +5,7 @@ from sqlalchemy.ext.asyncio import AsyncSession
 
 from src.core.dependencies import CurrentActiveUser, DbSession
 from src.db.session import get_session
-from src.schemas.usuario import RegisterResponse, Token, UsuarioCreate, UsuarioOut
+from src.schemas.usuario import CambiarPassword, EliminarCuenta, RegisterResponse, Token, UsuarioCreate, UsuarioOut
 from src.services import auth_service
 
 router = APIRouter(prefix="/auth", tags=["auth"])
@@ -33,3 +33,13 @@ async def login(
 @router.get("/me", response_model=UsuarioOut)
 async def me(user: CurrentActiveUser):
     return user
+
+
+@router.put("/cambiar-password", status_code=204)
+async def cambiar_password(body: CambiarPassword, user: CurrentActiveUser, db: DbSession):
+    await auth_service.cambiar_password(user, body.password_actual, body.nueva_password, db)
+
+
+@router.delete("/cuenta", status_code=204)
+async def eliminar_cuenta(body: EliminarCuenta, user: CurrentActiveUser, db: DbSession):
+    await auth_service.eliminar_cuenta(user, body.password, db)

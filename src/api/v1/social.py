@@ -3,13 +3,17 @@ from fastapi import APIRouter, HTTPException, status
 from src.core.dependencies import CurrentActiveUser, DbSession, OptionalUser
 from src.core.moderation import contains_profanity
 from src.db.repositories.comentario_repository import ComentarioRepository
+from src.db.repositories.favorito_usuario_repository import FavoritoUsuarioRepository
 from src.db.repositories.guardado_repository import GuardadoRepository
 from src.db.repositories.imagen_repository import ImagenRepository
 from src.db.repositories.like_repository import LikeRepository
 from src.db.repositories.reaccion_repository import ReaccionRepository
+from src.db.repositories.seguidor_repository import SeguidorRepository
+from src.db.repositories.usuario_repository import UsuarioRepository
 from src.models.reaccion import ALLOWED_EMOJIS
 from src.schemas.imagen import ImagenOut
 from src.schemas.social import ComentarioCreate, ComentarioOut, LikeInfo, ReaccionCreate, ReporteCreate
+from src.schemas.usuario import UsuarioMinimoOut
 
 router = APIRouter(prefix="/social", tags=["social"])
 
@@ -109,6 +113,71 @@ async def reaccionar(comentario_id: int, body: ReaccionCreate, db: DbSession, us
     mi_reaccion = await repo.toggle(comentario_id, user.id, body.emoji)
     reacciones = await repo.get_counts(comentario_id)
     return {"mi_reaccion": mi_reaccion, "reacciones": reacciones}
+
+
+@router.post("/usuarios/{username}/seguir")
+async def toggle_seguir(username: str, db: DbSession, user: CurrentActiveUser):
+    repo = UsuarioRepository(db)
+    target = await repo.get_by_username(username)
+    if not target:
+        raise HTTPException(status.HTTP_404_NOT_FOUND, "Usuario no encontrado")
+    if target.id == user.id:
+        raise HTTPException(status.HTTP_400_BAD_REQUEST, "No puedes seguirte a ti mismo")
+    siguiendo = await SeguidorRepository(db).toggle(user.id, target.id)
+    return {"siguiendo": siguiendo}
+
+
+@router.get("/usuarios/{username}/seguidores", response_model=list[UsuarioMinimoOut])
+async def get_seguidores(username: str, db: DbSession, viewer: OptionalUser):
+    repo = UsuarioRepository(db)
+    target = await repo.get_by_username(username)
+    if not target:
+        raise HTTPException(status.HTTP_404_NOT_FOUND, "Usuario no encontrado")
+    users = await SeguidorRepository(db).get_seguidores(target.id)
+    seg_repo = SeguidorRepository(db)
+    result = []
+    for u in users:
+        yo_sigo = await seg_repo.is_siguiendo(viewer.id, u.id) if viewer else False
+        result.append(UsuarioMinimoOut(username=u.username, avatar_url=u.avatar_url, bio=u.bio, yo_sigo=yo_sigo))
+    return result
+
+
+@router.get("/usuarios/{username}/siguiendo", response_model=list[UsuarioMinimoOut])
+async def get_siguiendo(username: str, db: DbSession, viewer: OptionalUser):
+    repo = UsuarioRepository(db)
+    target = await repo.get_by_username(username)
+    if not target:
+        raise HTTPException(status.HTTP_404_NOT_FOUND, "Usuario no encontrado")
+    users = await SeguidorRepository(db).get_siguiendo(target.id)
+    seg_repo = SeguidorRepository(db)
+    result = []
+    for u in users:
+        yo_sigo = await seg_repo.is_siguiendo(viewer.id, u.id) if viewer else False
+        result.append(UsuarioMinimoOut(username=u.username, avatar_url=u.avatar_url, bio=u.bio, yo_sigo=yo_sigo))
+    return result
+
+
+@router.post("/usuarios/{username}/favorito")
+async def toggle_favorito_usuario(username: str, db: DbSession, user: CurrentActiveUser):
+    repo = UsuarioRepository(db)
+    target = await repo.get_by_username(username)
+    if not target:
+        raise HTTPException(status.HTTP_404_NOT_FOUND, "Usuario no encontrado")
+    if target.id == user.id:
+        raise HTTPException(status.HTTP_400_BAD_REQUEST, "No puedes marcarte a ti mismo como favorito")
+    es_favorito = await FavoritoUsuarioRepository(db).toggle(user.id, target.id)
+    return {"es_favorito": es_favorito}
+
+
+@router.get("/mis-favoritos-usuarios", response_model=list[UsuarioMinimoOut])
+async def mis_favoritos_usuarios(db: DbSession, user: CurrentActiveUser):
+    users = await FavoritoUsuarioRepository(db).get_favoritos(user.id)
+    seg_repo = SeguidorRepository(db)
+    result = []
+    for u in users:
+        yo_sigo = await seg_repo.is_siguiendo(user.id, u.id)
+        result.append(UsuarioMinimoOut(username=u.username, avatar_url=u.avatar_url, bio=u.bio, yo_sigo=yo_sigo))
+    return result
 
 
 @router.post("/comentarios/{comentario_id}/reportar", status_code=204)

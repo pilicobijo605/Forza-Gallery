@@ -1447,15 +1447,241 @@ img { max-width: 100%; display: block; }
 
 .perfil-tabs-track {
   display: flex;
-  width: 200%;
+  width: 300%;
   transition: transform 0.35s cubic-bezier(0.4, 0, 0.2, 1);
 }
 
 .perfil-tab-panel {
-  width: 50%;
+  width: 33.333%;
   min-width: 0;
   flex-shrink: 0;
 }
+
+/* ── PERFIL HEADER EXTRAS ── */
+.perfil-info-top {
+  display: flex;
+  align-items: center;
+  gap: 0.75rem;
+  flex-wrap: wrap;
+}
+
+.perfil-settings-btn {
+  background: transparent;
+  border: 1px solid rgba(255,255,255,0.15);
+  border-radius: 50%;
+  color: var(--muted);
+  width: 2rem;
+  height: 2rem;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 1rem;
+  cursor: pointer;
+  text-decoration: none;
+  transition: color 0.15s, border-color 0.15s;
+  flex-shrink: 0;
+}
+.perfil-settings-btn:hover { color: var(--white); border-color: rgba(255,255,255,0.4); }
+
+.perfil-stats {
+  display: flex;
+  gap: 1.25rem;
+  flex-wrap: wrap;
+  margin: 0.5rem 0;
+}
+
+.perfil-stat-btn {
+  background: transparent;
+  border: none;
+  color: var(--muted);
+  font-size: 0.88rem;
+  cursor: pointer;
+  padding: 0;
+  display: flex;
+  gap: 0.3rem;
+  align-items: baseline;
+  transition: color 0.15s;
+}
+.perfil-stat-btn strong { color: var(--white); font-weight: 700; }
+.perfil-stat-btn:hover { color: var(--white); }
+.perfil-stat-btn.no-click { cursor: default; }
+
+.perfil-follow-actions {
+  display: flex;
+  gap: 0.5rem;
+  align-items: center;
+  margin-top: 0.75rem;
+  flex-wrap: wrap;
+}
+
+.follow-btn {
+  font-family: var(--font-cond);
+  font-size: 0.85rem;
+  font-weight: 700;
+  letter-spacing: 1px;
+  text-transform: uppercase;
+  padding: 0.45rem 1.4rem;
+  border-radius: var(--radius);
+  border: none;
+  cursor: pointer;
+  background: var(--teal);
+  color: #000;
+  transition: filter 0.15s, background 0.15s, color 0.15s;
+}
+.follow-btn:hover { filter: brightness(1.15); }
+.follow-btn.siguiendo {
+  background: transparent;
+  border: 1px solid rgba(255,255,255,0.25);
+  color: var(--white);
+}
+.follow-btn.siguiendo:hover { background: rgba(220,30,30,0.15); border-color: #e33; color: #f66; }
+
+.favorito-btn {
+  background: transparent;
+  border: 1px solid rgba(255,255,255,0.15);
+  border-radius: var(--radius);
+  color: var(--muted);
+  font-size: 1rem;
+  padding: 0.4rem 0.7rem;
+  cursor: pointer;
+  transition: color 0.15s, border-color 0.15s, background 0.15s;
+}
+.favorito-btn:hover, .favorito-btn.active { color: #fbbf24; border-color: #fbbf24; background: rgba(251,191,36,0.1); }
+
+/* ── FAVORITOS GRID ── */
+.favoritos-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(220px, 1fr));
+  gap: 0.75rem;
+  padding: 1rem;
+}
+
+.favorito-user-card {
+  display: flex;
+  align-items: center;
+  gap: 0.75rem;
+  background: var(--surface2);
+  border: 1px solid var(--border);
+  border-radius: var(--radius);
+  padding: 0.75rem 1rem;
+  text-decoration: none;
+  transition: border-color 0.15s, background 0.15s;
+}
+.favorito-user-card:hover { border-color: rgba(255,255,255,0.2); background: #1e1e1e; }
+.favorito-user-card img { width: 40px; height: 40px; border-radius: 50%; object-fit: cover; flex-shrink: 0; }
+.favorito-user-card-info { min-width: 0; }
+.favorito-user-card-name { color: var(--white); font-weight: 700; font-size: 0.9rem; display: block; }
+.favorito-user-card-bio { color: var(--muted); font-size: 0.78rem; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; display: block; }
+
+/* ── USER MODAL ── */
+.user-modal-overlay {
+  position: fixed;
+  inset: 0;
+  background: rgba(0,0,0,0.85);
+  z-index: 600;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 1rem;
+}
+
+.user-modal-box {
+  background: #111;
+  border: 1px solid rgba(255,255,255,0.12);
+  border-radius: 14px;
+  width: 100%;
+  max-width: 420px;
+  max-height: 80vh;
+  display: flex;
+  flex-direction: column;
+  overflow: hidden;
+}
+
+.user-modal-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 1rem 1.25rem 0.75rem;
+  border-bottom: 1px solid rgba(255,255,255,0.08);
+  font-family: var(--font-cond);
+  font-size: 1rem;
+  letter-spacing: 1px;
+  color: var(--white);
+  flex-shrink: 0;
+}
+
+.user-modal-close {
+  background: transparent;
+  border: none;
+  color: var(--muted);
+  font-size: 1.1rem;
+  cursor: pointer;
+  padding: 0.2rem 0.4rem;
+  border-radius: 50%;
+  transition: color 0.15s;
+}
+.user-modal-close:hover { color: var(--white); }
+
+.user-modal-list {
+  overflow-y: auto;
+  flex: 1;
+  padding: 0.5rem 0;
+}
+
+.user-modal-item {
+  display: flex;
+  align-items: center;
+  gap: 0.75rem;
+  padding: 0.65rem 1.25rem;
+  transition: background 0.12s;
+}
+.user-modal-item:hover { background: rgba(255,255,255,0.04); }
+
+.user-modal-avatar {
+  width: 42px;
+  height: 42px;
+  border-radius: 50%;
+  object-fit: cover;
+  flex-shrink: 0;
+}
+
+.user-modal-info { flex: 1; min-width: 0; }
+.user-modal-username {
+  color: var(--white);
+  font-weight: 700;
+  font-size: 0.9rem;
+  text-decoration: none;
+  display: block;
+}
+.user-modal-username:hover { text-decoration: underline; }
+.user-modal-bio {
+  color: var(--muted);
+  font-size: 0.78rem;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  display: block;
+}
+
+.user-modal-follow-btn {
+  font-family: var(--font-cond);
+  font-size: 0.78rem;
+  font-weight: 700;
+  letter-spacing: 0.5px;
+  text-transform: uppercase;
+  padding: 0.3rem 0.8rem;
+  border-radius: var(--radius);
+  border: 1px solid rgba(255,255,255,0.2);
+  background: transparent;
+  color: var(--white);
+  cursor: pointer;
+  transition: background 0.15s, border-color 0.15s;
+  white-space: nowrap;
+  flex-shrink: 0;
+}
+.user-modal-follow-btn:hover { background: rgba(255,255,255,0.08); }
+.user-modal-follow-btn.siguiendo { border-color: rgba(255,255,255,0.1); color: var(--muted); }
+.user-modal-follow-btn.siguiendo:hover { background: rgba(220,30,30,0.15); border-color: #e33; color: #f66; }
 
 /* ── COMMENT DATE & REACTIONS ── */
 .lb-comment-header {
