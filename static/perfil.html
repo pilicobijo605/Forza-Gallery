@@ -46,14 +46,33 @@
         </div>
       </div>
 
+      <div class="perfil-tabs" id="perfil-tabs">
+        <button class="perfil-tab active" id="tab-btn-fotos" data-tab="fotos">
+          <svg viewBox="0 0 24 24" width="18" height="18" fill="currentColor">
+            <rect x="3" y="3" width="7" height="7" rx="1"/>
+            <rect x="14" y="3" width="7" height="7" rx="1"/>
+            <rect x="3" y="14" width="7" height="7" rx="1"/>
+            <rect x="14" y="14" width="7" height="7" rx="1"/>
+          </svg>
+        </button>
+        <button class="perfil-tab" id="tab-btn-guardados" data-tab="guardados" style="display:none">
+          <svg viewBox="0 0 24 24" width="18" height="18" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+            <path d="M19 21l-7-5-7 5V5a2 2 0 0 1 2-2h10a2 2 0 0 1 2 2z"/>
+          </svg>
+        </button>
+      </div>
+
       <div class="teal-divider" style="margin:0"></div>
 
-      <div class="gallery-grid" id="perfil-gallery"></div>
-
-      <div id="guardados-section" class="guardados-section" style="display:none">
-        <div class="teal-divider" style="margin-bottom:1.5rem"></div>
-        <h2 class="guardados-title">Guardados</h2>
-        <div class="gallery-grid" id="guardados-grid" style="padding:0.75rem 0 2rem"></div>
+      <div class="perfil-tabs-slider">
+        <div class="perfil-tabs-track" id="perfil-tabs-track">
+          <div class="perfil-tab-panel">
+            <div class="gallery-grid" id="perfil-gallery"></div>
+          </div>
+          <div class="perfil-tab-panel">
+            <div class="gallery-grid" id="guardados-grid"></div>
+          </div>
+        </div>
       </div>
     </div>
   </main>
@@ -76,10 +95,10 @@
         <div class="lb-info-left">
           <span class="juego-badge" id="lb-juego"></span>
           <div class="tags-row" id="lb-tags"></div>
+          <a class="lb-username" id="lb-username" href="#"></a>
           <p class="lb-desc" id="lb-desc"></p>
         </div>
         <div class="lb-info-right">
-          <a class="lb-username" id="lb-username" href="#" style="display:none"></a>
           <div class="lb-actions">
             <button class="lb-action-btn" id="lb-like-btn" title="Like">
               <span class="lb-action-icon">♡</span><span id="lb-like-count">0</span>
@@ -151,7 +170,7 @@
         }
         if (meUser && meUser.username === username) {
           document.getElementById("perfil-actions").style.display = "block";
-          document.getElementById("guardados-section").style.display = "block";
+          document.getElementById("tab-btn-guardados").style.display = "flex";
           loadGuardados();
         }
 
@@ -250,26 +269,52 @@
       document.getElementById("lb-like-count").textContent = count;
     }
 
+    const EMOJIS = ["❤️","😂","😮","👍","🔥"];
+
     function renderComentarios(comentarios, imagenId) {
       const list = document.getElementById("lb-comments-list");
       document.getElementById("lb-comment-count").textContent = comentarios.length;
       if (!comentarios.length) { list.innerHTML = ""; return; }
-      list.innerHTML = comentarios.map(c => `
-        <div class="lb-comment-item" data-id="${c.id}">
-          <div class="lb-comment-body">
-            <span class="lb-comment-author">${c.username}</span>
-            <span class="lb-comment-text">${c.contenido.replace(/</g,"&lt;")}</span>
-          </div>
-          <div class="lb-comment-actions">
-            ${meUser && meUser.id === c.usuario_id
-              ? `<button class="lb-comment-action delete" data-id="${c.id}" title="Eliminar">🗑</button>`
-              : (meUser
-                  ? `<button class="lb-comment-action report" data-id="${c.id}" title="Reportar">⚑</button>`
-                  : "")}
-          </div>
-        </div>
-      `).join("");
 
+      list.innerHTML = comentarios.map(c => {
+        const reacciones = EMOJIS.map(e => {
+          const count = (c.reacciones && c.reacciones[e]) || 0;
+          const active = c.mi_reaccion === e ? " active" : "";
+          return `<button class="lb-reaction-btn${active}" data-cid="${c.id}" data-emoji="${e}">
+            ${e}<span class="lb-reaction-count">${count || ""}</span>
+          </button>`;
+        }).join("");
+
+        return `
+          <div class="lb-comment-item" data-id="${c.id}">
+            <div class="lb-comment-body">
+              <div class="lb-comment-header">
+                <span class="lb-comment-author">${c.username}</span>
+                <span class="lb-comment-time">${timeAgo(c.created_at)}</span>
+              </div>
+              <span class="lb-comment-text">${c.contenido.replace(/</g,"&lt;")}</span>
+              <div class="lb-reactions">${reacciones}</div>
+            </div>
+            <div class="lb-comment-actions">
+              ${meUser && meUser.id === c.usuario_id
+                ? `<button class="lb-comment-action delete" data-id="${c.id}" title="Eliminar">🗑</button>`
+                : (meUser
+                    ? `<button class="lb-comment-action report" data-id="${c.id}" title="Reportar">⚑</button>`
+                    : "")}
+            </div>
+          </div>`;
+      }).join("");
+
+      list.querySelectorAll(".lb-reaction-btn").forEach(btn =>
+        btn.addEventListener("click", async () => {
+          if (!isLoggedIn()) { showToast("Inicia sesión para reaccionar", "info"); return; }
+          try {
+            await reaccionar(btn.dataset.cid, btn.dataset.emoji);
+            const cs = await getComentarios(imagenId);
+            renderComentarios(cs, imagenId);
+          } catch(e) { showToast(e.message, "error"); }
+        })
+      );
       list.querySelectorAll(".delete").forEach(btn =>
         btn.addEventListener("click", async () => {
           try {
@@ -289,6 +334,15 @@
         })
       );
     }
+
+    document.querySelectorAll(".perfil-tab").forEach(btn => {
+      btn.addEventListener("click", () => {
+        document.querySelectorAll(".perfil-tab").forEach(b => b.classList.remove("active"));
+        btn.classList.add("active");
+        const track = document.getElementById("perfil-tabs-track");
+        track.style.transform = btn.dataset.tab === "guardados" ? "translateX(-50%)" : "translateX(0)";
+      });
+    });
 
     async function loadLbSocial(imagenId) {
       try {
@@ -368,11 +422,9 @@
     });
 
     async function loadGuardados() {
-      const section = document.getElementById("guardados-section");
-      if (!section) return;
+      const grid = document.getElementById("guardados-grid");
       try {
         const imagenes = await getMisGuardados();
-        const grid = document.getElementById("guardados-grid");
         if (!imagenes.length) {
           grid.innerHTML = `<div class="state-box"><span class="state-icon">🔖</span><p>Aún no has guardado ninguna imagen.</p></div>`;
           return;
@@ -391,7 +443,9 @@
             try { const img = await fetchImagen(card.dataset.id); openLightbox(img); } catch {}
           });
         });
-      } catch {}
+      } catch {
+        grid.innerHTML = `<div class="state-box"><span class="state-icon">🔖</span><p>Aún no has guardado ninguna imagen.</p></div>`;
+      }
     }
 
     loadPerfil();

@@ -1260,21 +1260,112 @@ img { max-width: 100%; display: block; }
 .lb-login-hint a { color: var(--teal); font-weight: 600; }
 .lb-login-hint a:hover { text-decoration: underline; }
 
-/* ── GUARDADOS SECTION ── */
-.guardados-section {
-  padding: clamp(1.5rem, 4vw, 2.5rem) clamp(1rem, 4vw, 2.5rem) 0;
-  max-width: 1400px;
-  margin: 0 auto;
+/* ── LB USERNAME in left column ── */
+.lb-info-left .lb-username {
+  flex-basis: 100%;
+  margin-top: 0.35rem;
+  font-size: 0.88rem;
 }
 
-.guardados-title {
-  font-family: var(--font-display);
-  font-size: clamp(1.2rem, 3vw, 1.8rem);
-  letter-spacing: 2px;
-  color: var(--muted);
-  text-transform: uppercase;
-  margin-bottom: 0.5rem;
+/* ── PERFIL TABS ── */
+.perfil-tabs {
+  display: flex;
+  justify-content: center;
+  border-top: 1px solid var(--border);
 }
+
+.perfil-tab {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 0.8rem 3.5rem;
+  background: transparent;
+  border: none;
+  border-top: 2px solid transparent;
+  color: var(--muted);
+  cursor: pointer;
+  transition: color 0.2s, border-color 0.2s;
+}
+
+.perfil-tab.active {
+  color: var(--white);
+  border-top-color: var(--white);
+}
+
+.perfil-tab svg { display: block; }
+
+.perfil-tabs-slider {
+  overflow: hidden;
+  width: 100%;
+}
+
+.perfil-tabs-track {
+  display: flex;
+  width: 200%;
+  transition: transform 0.35s cubic-bezier(0.4, 0, 0.2, 1);
+}
+
+.perfil-tab-panel {
+  width: 50%;
+  min-width: 0;
+  flex-shrink: 0;
+}
+
+/* ── COMMENT DATE & REACTIONS ── */
+.lb-comment-header {
+  display: flex;
+  align-items: baseline;
+  justify-content: space-between;
+  gap: 0.5rem;
+  margin-bottom: 0.2rem;
+}
+
+.lb-comment-time {
+  font-size: 0.72rem;
+  color: var(--muted);
+  flex-shrink: 0;
+  white-space: nowrap;
+}
+
+.lb-reactions {
+  display: flex;
+  gap: 0.25rem;
+  margin-top: 0.35rem;
+  flex-wrap: wrap;
+}
+
+.lb-reaction-btn {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.2rem;
+  background: transparent;
+  border: 1px solid var(--border);
+  border-radius: 999px;
+  padding: 0.1rem 0.45rem;
+  font-size: 0.82rem;
+  cursor: pointer;
+  transition: background 0.15s, border-color 0.15s;
+  line-height: 1.5;
+}
+
+.lb-reaction-btn:hover {
+  background: var(--surface2);
+  border-color: rgba(255,255,255,0.2);
+}
+
+.lb-reaction-btn.active {
+  background: var(--teal-dim);
+  border-color: var(--teal);
+}
+
+.lb-reaction-count {
+  font-family: var(--font-cond);
+  font-weight: 700;
+  font-size: 0.7rem;
+  color: var(--muted);
+}
+
+.lb-reaction-btn.active .lb-reaction-count { color: var(--teal); }
 
 /* ── RESPONSIVE ── */
 @media (max-width: 480px) {

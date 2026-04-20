@@ -6,8 +6,10 @@ from src.db.repositories.comentario_repository import ComentarioRepository
 from src.db.repositories.guardado_repository import GuardadoRepository
 from src.db.repositories.imagen_repository import ImagenRepository
 from src.db.repositories.like_repository import LikeRepository
+from src.db.repositories.reaccion_repository import ReaccionRepository
+from src.models.reaccion import ALLOWED_EMOJIS
 from src.schemas.imagen import ImagenOut
-from src.schemas.social import ComentarioCreate, ComentarioOut, LikeInfo, ReporteCreate
+from src.schemas.social import ComentarioCreate, ComentarioOut, LikeInfo, ReaccionCreate, ReporteCreate
 
 router = APIRouter(prefix="/social", tags=["social"])
 
@@ -46,19 +48,24 @@ async def mis_guardados(db: DbSession, user: CurrentActiveUser):
 
 
 @router.get("/imagenes/{imagen_id}/comentarios", response_model=list[ComentarioOut])
-async def get_comentarios(imagen_id: int, db: DbSession):
+async def get_comentarios(imagen_id: int, db: DbSession, user: OptionalUser):
     comentarios = await ComentarioRepository(db).get_by_imagen(imagen_id)
-    return [
-        ComentarioOut(
+    reaccion_repo = ReaccionRepository(db)
+    result = []
+    for c in comentarios:
+        reacciones = await reaccion_repo.get_counts(c.id)
+        mi_reaccion = await reaccion_repo.get_user_reaccion(c.id, user.id) if user else None
+        result.append(ComentarioOut(
             id=c.id,
             imagen_id=c.imagen_id,
             usuario_id=c.usuario_id,
             username=c.usuario.username if c.usuario else "",
             contenido=c.contenido,
             created_at=c.created_at,
-        )
-        for c in comentarios
-    ]
+            reacciones=reacciones,
+            mi_reaccion=mi_reaccion,
+        ))
+    return result
 
 
 @router.post("/imagenes/{imagen_id}/comentarios", response_model=ComentarioOut, status_code=201)
@@ -90,6 +97,18 @@ async def delete_comentario(comentario_id: int, db: DbSession, user: CurrentActi
     if c.usuario_id != user.id:
         raise HTTPException(status.HTTP_403_FORBIDDEN, "No puedes eliminar este comentario")
     await repo.delete(c)
+
+
+@router.post("/comentarios/{comentario_id}/reaccionar")
+async def reaccionar(comentario_id: int, body: ReaccionCreate, db: DbSession, user: CurrentActiveUser):
+    if body.emoji not in ALLOWED_EMOJIS:
+        raise HTTPException(status.HTTP_422_UNPROCESSABLE_ENTITY, "Emoji no permitido")
+    if not await ComentarioRepository(db).get_by_id(comentario_id):
+        raise HTTPException(status.HTTP_404_NOT_FOUND, "Comentario no encontrado")
+    repo = ReaccionRepository(db)
+    mi_reaccion = await repo.toggle(comentario_id, user.id, body.emoji)
+    reacciones = await repo.get_counts(comentario_id)
+    return {"mi_reaccion": mi_reaccion, "reacciones": reacciones}
 
 
 @router.post("/comentarios/{comentario_id}/reportar", status_code=204)

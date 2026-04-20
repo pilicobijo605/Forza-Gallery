@@ -15,6 +15,8 @@ class ComentarioOut(BaseModel):
     username: str
     contenido: str
     created_at: datetime
+    reacciones: dict[str, int] = {}
+    mi_reaccion: str | None = None
 
 
 class ComentarioCreate(BaseModel):
@@ -23,3 +25,7 @@ class ComentarioCreate(BaseModel):
 
 class ReporteCreate(BaseModel):
     motivo: str | None = None
+
+
+class ReaccionCreate(BaseModel):
+    emoji: str

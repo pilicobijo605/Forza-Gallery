@@ -113,6 +113,23 @@ async function getMisGuardados() {
   return apiFetch("/social/mis-guardados");
 }
 
+async function reaccionar(comentarioId, emoji) {
+  return apiFetch(`/social/comentarios/${comentarioId}/reaccionar`, {
+    method: "POST",
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify({ emoji }),
+  });
+}
+
+function timeAgo(isoDate) {
+  const diff = (Date.now() - new Date(isoDate)) / 1000;
+  if (diff < 60)     return "ahora";
+  if (diff < 3600)   return `${Math.floor(diff / 60)}min`;
+  if (diff < 86400)  return `${Math.floor(diff / 3600)}h`;
+  if (diff < 604800) return `${Math.floor(diff / 86400)}d`;
+  return new Date(isoDate).toLocaleDateString("es-ES", { day: "2-digit", month: "short" });
+}
+
 async function login(username, password) {
   const body = new URLSearchParams({ username, password });
   const res = await fetch(`${BASE}/auth/login`, {
