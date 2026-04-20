@@ -1282,7 +1282,7 @@ img { max-width: 100%; display: block; }
 
 .lb-edit-form {
   width: 100%;
-  border-top: 1px solid var(--border);
+  border-top: 1px solid rgba(255,255,255,0.1);
   padding-top: 0.75rem;
   margin-top: 0.5rem;
   display: flex;
@@ -1299,8 +1299,8 @@ img { max-width: 100%; display: block; }
 .lb-edit-select,
 .lb-edit-textarea {
   width: 100%;
-  background: var(--surface);
-  border: 1px solid var(--border);
+  background: #1a1a1a;
+  border: 1px solid rgba(255,255,255,0.15);
   border-radius: var(--radius);
   color: var(--white);
   font-family: var(--font-body);
@@ -1312,7 +1312,7 @@ img { max-width: 100%; display: block; }
 
 .lb-edit-input:focus,
 .lb-edit-select:focus,
-.lb-edit-textarea:focus { border-color: var(--teal); }
+.lb-edit-textarea:focus { border-color: var(--teal); outline: none; }
 
 .lb-edit-select { width: auto; flex-shrink: 0; cursor: pointer; }
 .lb-edit-select option { background: var(--surface2); }
@@ -1340,7 +1340,7 @@ img { max-width: 100%; display: block; }
 
 .lb-edit-btn-save   { background: var(--teal); color: #000; }
 .lb-edit-btn-save:hover { filter: brightness(1.15); }
-.lb-edit-btn-cancel { background: var(--surface2); color: var(--muted); border: 1px solid var(--border); }
+.lb-edit-btn-cancel { background: #1a1a1a; color: var(--muted); border: 1px solid rgba(255,255,255,0.15); }
 .lb-edit-btn-cancel:hover { color: var(--white); }
 
 /* ── LB USERNAME in left column ── */
