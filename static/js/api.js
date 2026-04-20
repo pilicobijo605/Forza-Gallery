@@ -99,7 +99,9 @@ async function register(username, email, password) {
     const err = await res.json().catch(() => ({ detail: "Error" }));
     throw new Error(extractDetail(err));
   }
-  return res.json();
+  const data = await res.json();
+  setToken(data.access_token);
+  return data;
 }
 
 async function fetchMe() {

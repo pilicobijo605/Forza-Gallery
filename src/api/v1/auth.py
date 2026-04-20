@@ -11,7 +11,7 @@ from src.services import auth_service
 router = APIRouter(prefix="/auth", tags=["auth"])
 
 
-@router.post("/register", response_model=RegisterResponse, status_code=201)
+@router.post("/register", response_model=Token, status_code=201)
 async def register(data: UsuarioCreate, db: DbSession):
     return await auth_service.register(data, db)
 

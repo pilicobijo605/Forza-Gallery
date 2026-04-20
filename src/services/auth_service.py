@@ -9,32 +9,15 @@ from src.db.repositories.usuario_repository import UsuarioRepository
 from src.schemas.usuario import RegisterResponse, Token, UsuarioCreate
 
 
-async def register(data: UsuarioCreate, db: AsyncSession) -> RegisterResponse:
+async def register(data: UsuarioCreate, db: AsyncSession) -> Token:
     repo = UsuarioRepository(db)
     if await repo.get_by_username(data.username):
         raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail="Username ya en uso")
     if await repo.get_by_email(data.email):
         raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail="Email ya en uso")
 
-    token = secrets.token_urlsafe(32)
-    user = await repo.create(data.username, data.email, hash_password(data.password), token)
-
-    try:
-        await send_verification_email(user.email, user.username, token)
-    except Exception as e:
-        import logging
-        logging.error(f"SMTP error: {type(e).__name__}: {e}")
-        await db.delete(user)
-        await db.commit()
-        raise HTTPException(
-            status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
-            detail="No se pudo enviar el email de verificación. Inténtalo de nuevo.",
-        )
-
-    return RegisterResponse(
-        message="Te hemos enviado un email de verificación.",
-        email=user.email,
-    )
+    user = await repo.create(data.username, data.email, hash_password(data.password), verification_token=None, is_verified=True)
+    return Token(access_token=create_access_token(user.username))
 
 
 async def verify_email(token: str, db: AsyncSession) -> None:

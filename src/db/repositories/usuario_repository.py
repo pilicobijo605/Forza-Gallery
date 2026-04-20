@@ -20,12 +20,12 @@ class UsuarioRepository:
         result = await self.db.execute(select(Usuario).where(Usuario.verification_token == token))
         return result.scalar_one_or_none()
 
-    async def create(self, username: str, email: str, hashed_password: str, verification_token: str) -> Usuario:
+    async def create(self, username: str, email: str, hashed_password: str, verification_token: str | None = None, is_verified: bool = True) -> Usuario:
         user = Usuario(
             username=username,
             email=email,
             password=hashed_password,
-            is_verified=False,
+            is_verified=is_verified,
             verification_token=verification_token,
         )
         self.db.add(user)
