@@ -569,15 +569,13 @@
 
     document.getElementById("lb-share-copy").addEventListener("click", async () => {
       const url = `${location.origin}/galeria.html?id=${currentLbId}`;
+      document.getElementById("lb-share-menu").style.display = "none";
       try {
         await navigator.clipboard.writeText(url);
-        const btn = document.getElementById("lb-share-copy");
-        const span = btn.querySelector("span");
-        btn.classList.add("copied");
-        span.textContent = "¡Copiado!";
-        setTimeout(() => { btn.classList.remove("copied"); span.textContent = "Copiar enlace"; }, 2000);
-      } catch { showToast("No se pudo copiar", "error"); }
-      document.getElementById("lb-share-menu").style.display = "none";
+        showToast("¡Enlace copiado!", "success");
+      } catch {
+        showToast("No se pudo copiar el enlace", "error");
+      }
     });
 
     document.addEventListener("click", (e) => {
