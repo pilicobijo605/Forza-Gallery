@@ -33,4 +33,5 @@ async def send_verification_email(to_email: str, username: str, token: str) -> N
         username=settings.smtp_user,
         password=settings.smtp_password,
         start_tls=True,
+        timeout=10,
     )
