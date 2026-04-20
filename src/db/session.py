@@ -25,6 +25,11 @@ async def init_db():
 
     async with engine.begin() as conn:
         await conn.run_sync(Base.metadata.create_all)
+        from sqlalchemy import text
+        try:
+            await conn.execute(text("ALTER TABLE imagenes ADD COLUMN visitas INTEGER NOT NULL DEFAULT 0"))
+        except Exception:
+            pass
 
     async with SessionLocal() as session:
         result = await session.execute(select(Usuario).where(Usuario.username == settings.admin_username))

@@ -4,7 +4,7 @@
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
   <title>Galería — Forza Gallery</title>
-  <link rel="stylesheet" href="/css/style.css?v=2" />
+  <link rel="stylesheet" href="/css/style.css?v=3" />
 </head>
 <body>
 
@@ -71,6 +71,28 @@
             <button class="lb-action-btn" id="lb-comment-btn" title="Comentarios">
               <span class="lb-action-icon">💬</span><span id="lb-comment-count">0</span>
             </button>
+            <span class="lb-action-stat" title="Visitas">
+              <span class="lb-action-icon">👁</span><span id="lb-views-count">0</span>
+            </span>
+            <div class="lb-share-wrap" id="lb-share-wrap">
+              <button class="lb-action-btn" id="lb-share-btn" title="Compartir">
+                <span class="lb-action-icon">↗</span>
+              </button>
+              <div class="lb-share-menu" id="lb-share-menu" style="display:none">
+                <a class="lb-share-item" id="lb-share-wa" href="#" target="_blank" rel="noopener noreferrer">
+                  <svg width="16" height="16" viewBox="0 0 24 24" fill="currentColor"><path d="M17.472 14.382c-.297-.149-1.758-.867-2.03-.967-.273-.099-.471-.148-.67.15-.197.297-.767.966-.94 1.164-.173.199-.347.223-.644.075-.297-.15-1.255-.463-2.39-1.475-.883-.788-1.48-1.761-1.653-2.059-.173-.297-.018-.458.13-.606.134-.133.298-.347.446-.52.149-.174.198-.298.298-.497.099-.198.05-.371-.025-.52-.075-.149-.669-1.612-.916-2.207-.242-.579-.487-.5-.669-.51-.173-.008-.371-.01-.57-.01-.198 0-.52.074-.792.372-.272.297-1.04 1.016-1.04 2.479 0 1.462 1.065 2.875 1.213 3.074.149.198 2.096 3.2 5.077 4.487.709.306 1.262.489 1.694.625.712.227 1.36.195 1.871.118.571-.085 1.758-.719 2.006-1.413.248-.694.248-1.289.173-1.413z"/><path d="M12 2C6.477 2 2 6.477 2 12c0 1.89.525 3.66 1.438 5.168L2 22l4.988-1.31A9.945 9.945 0 0012 22c5.523 0 10-4.477 10-10S17.523 2 12 2z"/></svg>
+                  <span>WhatsApp</span>
+                </a>
+                <a class="lb-share-item" id="lb-share-tw" href="#" target="_blank" rel="noopener noreferrer">
+                  <svg width="16" height="16" viewBox="0 0 24 24" fill="currentColor"><path d="M18.244 2.25h3.308l-7.227 8.26 8.502 11.24H16.17l-4.714-6.231-5.401 6.231H2.746l7.73-8.835L1.254 2.25H8.08l4.259 5.629L18.244 2.25zm-1.161 17.52h1.833L7.084 4.126H5.117L17.083 19.77z"/></svg>
+                  <span>Twitter / X</span>
+                </a>
+                <button class="lb-share-item" id="lb-share-copy">
+                  <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="9" y="9" width="13" height="13" rx="2"/><path d="M5 15H4a2 2 0 01-2-2V4a2 2 0 012-2h9a2 2 0 012 2v1"/></svg>
+                  <span>Copiar enlace</span>
+                </button>
+              </div>
+            </div>
           </div>
         </div>
       </div>
@@ -223,6 +245,8 @@
         setDateFilter(dateOnly);
       };
 
+      document.getElementById("lb-views-count").textContent = img.visitas ?? 0;
+      document.getElementById("lb-share-menu").style.display = "none";
       document.getElementById("lb-like-count").textContent = "0";
       document.getElementById("lb-like-btn").className = "lb-action-btn";
       document.getElementById("lb-save-btn").className = "lb-action-btn";
@@ -242,6 +266,7 @@
       document.getElementById("lightbox").classList.remove("open");
       document.getElementById("lb-edit-form").style.display = "none";
       document.getElementById("lb-edit-toggle").className = "lb-edit-toggle";
+      document.getElementById("lb-share-menu").style.display = "none";
       currentLbId   = null;
       currentLbData = null;
     }
@@ -554,7 +579,48 @@
       }
     });
 
-    loadUser().then(loadGallery);
+    document.getElementById("lb-share-btn").addEventListener("click", (e) => {
+      e.stopPropagation();
+      const menu = document.getElementById("lb-share-menu");
+      const opening = menu.style.display === "none";
+      menu.style.display = opening ? "flex" : "none";
+      if (opening && currentLbId) {
+        const url   = `${location.origin}/galeria.html?id=${currentLbId}`;
+        const title = currentLbData?.titulo || "Forza Gallery";
+        document.getElementById("lb-share-wa").href =
+          `https://wa.me/?text=${encodeURIComponent(title + " — " + url)}`;
+        document.getElementById("lb-share-tw").href =
+          `https://x.com/intent/tweet?text=${encodeURIComponent(title)}&url=${encodeURIComponent(url)}`;
+      }
+    });
+
+    document.getElementById("lb-share-copy").addEventListener("click", async () => {
+      const url = `${location.origin}/galeria.html?id=${currentLbId}`;
+      try {
+        await navigator.clipboard.writeText(url);
+        const btn = document.getElementById("lb-share-copy");
+        const span = btn.querySelector("span");
+        btn.classList.add("copied");
+        span.textContent = "¡Copiado!";
+        setTimeout(() => { btn.classList.remove("copied"); span.textContent = "Copiar enlace"; }, 2000);
+      } catch { showToast("No se pudo copiar", "error"); }
+      document.getElementById("lb-share-menu").style.display = "none";
+    });
+
+    document.addEventListener("click", (e) => {
+      if (!e.target.closest("#lb-share-wrap")) {
+        const menu = document.getElementById("lb-share-menu");
+        if (menu) menu.style.display = "none";
+      }
+    });
+
+    const _openId = _params.get("id");
+    loadUser().then(async () => {
+      await loadGallery();
+      if (_openId) {
+        try { const img = await fetchImagen(_openId); openLightbox(img); } catch {}
+      }
+    });
   </script>
 </body>
 </html>

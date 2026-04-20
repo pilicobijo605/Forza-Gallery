@@ -44,6 +44,10 @@ class ImagenRepository:
         result = await self.db.execute(select(Imagen).where(Imagen.id == imagen_id))
         return result.scalar_one_or_none()
 
+    async def increment_visitas(self, imagen: Imagen) -> None:
+        imagen.visitas += 1
+        await self.db.commit()
+
     async def count_by_juego(self) -> dict[str, int]:
         result = await self.db.execute(select(Imagen.juego, Imagen.id))
         rows = result.all()

@@ -48,6 +48,7 @@ async def get_imagen(db: AsyncSession, imagen_id: int) -> ImagenOut:
     img = await repo.get_by_id(imagen_id)
     if not img:
         raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Imagen no encontrada")
+    await repo.increment_visitas(img)
     return ImagenOut.model_validate(img)
 
 

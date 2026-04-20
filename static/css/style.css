@@ -1343,6 +1343,69 @@ img { max-width: 100%; display: block; }
 .lb-edit-btn-cancel { background: #1a1a1a; color: var(--muted); border: 1px solid rgba(255,255,255,0.15); }
 .lb-edit-btn-cancel:hover { color: var(--white); }
 
+/* ── VISITAS STAT ── */
+.lb-action-stat {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.3rem;
+  color: var(--muted);
+  font-family: var(--font-cond);
+  font-size: 0.82rem;
+  font-weight: 700;
+  letter-spacing: 0.5px;
+  padding: 0.3rem 0.5rem;
+  white-space: nowrap;
+  user-select: none;
+}
+
+/* ── SHARE MENU ── */
+.lb-share-wrap { position: relative; }
+
+.lb-share-menu {
+  position: absolute;
+  bottom: calc(100% + 6px);
+  right: 0;
+  z-index: 200;
+  background: #222;
+  border: 1px solid rgba(255,255,255,0.15);
+  border-radius: 10px;
+  padding: 0.35rem;
+  display: flex;
+  flex-direction: column;
+  gap: 0.1rem;
+  min-width: 160px;
+  box-shadow: 0 4px 24px rgba(0,0,0,0.7);
+  animation: shareMenuIn 0.12s ease;
+}
+
+@keyframes shareMenuIn {
+  from { opacity: 0; transform: translateY(6px); }
+  to   { opacity: 1; transform: translateY(0); }
+}
+
+.lb-share-item {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+  padding: 0.5rem 0.75rem;
+  border-radius: 7px;
+  border: none;
+  background: transparent;
+  color: var(--white);
+  font-family: var(--font-body);
+  font-size: 0.88rem;
+  cursor: pointer;
+  text-decoration: none;
+  transition: background 0.12s;
+  white-space: nowrap;
+  width: 100%;
+  text-align: left;
+  box-sizing: border-box;
+}
+
+.lb-share-item:hover { background: rgba(255,255,255,0.08); }
+.lb-share-item.copied { color: #4ade80; }
+
 /* ── LB USERNAME in left column ── */
 .lb-info-left .lb-username {
   flex-basis: 100%;

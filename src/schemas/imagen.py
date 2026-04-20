@@ -16,6 +16,7 @@ class ImagenOut(BaseModel):
     juego: str
     descripcion: str | None
     filename: str
+    visitas: int = 0
     usuario_id: int
     username: str = ""
     created_at: datetime
@@ -34,6 +35,7 @@ class ImagenOut(BaseModel):
                 "juego": data.juego,
                 "descripcion": data.descripcion,
                 "filename": data.filename,
+                "visitas": data.visitas,
                 "usuario_id": data.usuario_id,
                 "username": usuario.username if usuario else "",
                 "created_at": data.created_at,
