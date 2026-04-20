@@ -33,6 +33,7 @@ async def init_db():
                 email=settings.admin_email,
                 password=hash_password(settings.admin_password),
                 is_active=True,
+                is_verified=True,
             )
             session.add(admin)
             await session.commit()

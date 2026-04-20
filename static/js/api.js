@@ -21,6 +21,13 @@ function authHeaders() {
   return token ? { Authorization: `Bearer ${token}` } : {};
 }
 
+function extractDetail(err) {
+  if (!err.detail) return "Error desconocido";
+  if (typeof err.detail === "string") return err.detail;
+  if (Array.isArray(err.detail)) return err.detail.map(e => e.msg).join(" · ");
+  return "Error desconocido";
+}
+
 async function apiFetch(path, options = {}) {
   const res = await fetch(`${BASE}${path}`, {
     ...options,
@@ -28,7 +35,7 @@ async function apiFetch(path, options = {}) {
   });
   if (!res.ok) {
     const err = await res.json().catch(() => ({ detail: "Error desconocido" }));
-    throw new Error(err.detail || `HTTP ${res.status}`);
+    throw new Error(extractDetail(err));
   }
   if (res.status === 204) return null;
   return res.json();
@@ -90,11 +97,9 @@ async function register(username, email, password) {
   });
   if (!res.ok) {
     const err = await res.json().catch(() => ({ detail: "Error" }));
-    throw new Error(err.detail || "Error de registro");
+    throw new Error(extractDetail(err));
   }
-  const data = await res.json();
-  setToken(data.access_token);
-  return data;
+  return res.json();
 }
 
 async function fetchMe() {

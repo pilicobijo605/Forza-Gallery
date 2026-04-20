@@ -44,6 +44,13 @@
         </div>
       </form>
 
+      <div id="verify-notice" style="display:none;text-align:center;padding:16px 0">
+        <p style="font-size:1.4rem">📧</p>
+        <p>Hemos enviado un email de verificación a<br><strong id="verify-email-addr"></strong></p>
+        <p style="color:#888;font-size:.9em">Revisa tu bandeja de entrada y haz clic en el enlace para activar tu cuenta.</p>
+        <a href="/login.html" class="btn btn-primary" style="margin-top:16px;display:inline-block">Ir al login</a>
+      </div>
+
       <div class="auth-switch">
         ¿Ya tienes cuenta? <a href="/login.html">Inicia sesión</a>
       </div>
@@ -61,13 +68,14 @@
       btn.disabled = true;
       btn.textContent = "Creando cuenta...";
       try {
-        await register(
+        const data = await register(
           document.getElementById("username").value.trim(),
           document.getElementById("email").value.trim(),
           document.getElementById("password").value
         );
-        showToast("¡Cuenta creada!", "success");
-        setTimeout(() => window.location.href = "/index.html", 1000);
+        document.getElementById("register-form").style.display = "none";
+        document.getElementById("verify-notice").style.display = "block";
+        document.getElementById("verify-email-addr").textContent = data.email;
       } catch(err) {
         showToast(err.message, "error");
         btn.disabled = false;

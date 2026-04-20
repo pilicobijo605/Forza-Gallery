@@ -16,9 +16,24 @@ class UsuarioRepository:
         result = await self.db.execute(select(Usuario).where(Usuario.email == email))
         return result.scalar_one_or_none()
 
-    async def create(self, username: str, email: str, hashed_password: str) -> Usuario:
-        user = Usuario(username=username, email=email, password=hashed_password)
+    async def get_by_verification_token(self, token: str) -> Usuario | None:
+        result = await self.db.execute(select(Usuario).where(Usuario.verification_token == token))
+        return result.scalar_one_or_none()
+
+    async def create(self, username: str, email: str, hashed_password: str, verification_token: str) -> Usuario:
+        user = Usuario(
+            username=username,
+            email=email,
+            password=hashed_password,
+            is_verified=False,
+            verification_token=verification_token,
+        )
         self.db.add(user)
         await self.db.commit()
         await self.db.refresh(user)
         return user
+
+    async def verify_user(self, user: Usuario) -> None:
+        user.is_verified = True
+        user.verification_token = None
+        await self.db.commit()
