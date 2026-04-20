@@ -35,6 +35,28 @@ async def init_db():
             await conn.execute(text("UPDATE usuarios SET is_public = TRUE WHERE is_public IS NULL"))
         except Exception:
             pass
+        try:
+            await conn.execute(text("""
+                CREATE TABLE IF NOT EXISTS seguidores (
+                    seguidor_id INTEGER NOT NULL REFERENCES usuarios(id) ON DELETE CASCADE,
+                    seguido_id  INTEGER NOT NULL REFERENCES usuarios(id) ON DELETE CASCADE,
+                    created_at  TIMESTAMPTZ NOT NULL DEFAULT NOW(),
+                    PRIMARY KEY (seguidor_id, seguido_id)
+                )
+            """))
+        except Exception:
+            pass
+        try:
+            await conn.execute(text("""
+                CREATE TABLE IF NOT EXISTS usuarios_favoritos (
+                    usuario_id  INTEGER NOT NULL REFERENCES usuarios(id) ON DELETE CASCADE,
+                    favorito_id INTEGER NOT NULL REFERENCES usuarios(id) ON DELETE CASCADE,
+                    created_at  TIMESTAMPTZ NOT NULL DEFAULT NOW(),
+                    PRIMARY KEY (usuario_id, favorito_id)
+                )
+            """))
+        except Exception:
+            pass
 
     async with SessionLocal() as session:
         result = await session.execute(select(Usuario).where(Usuario.username == settings.admin_username))
