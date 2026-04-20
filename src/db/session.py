@@ -31,6 +31,10 @@ async def init_db():
             await conn.execute(text("ALTER TABLE imagenes ADD COLUMN visitas INTEGER NOT NULL DEFAULT 0"))
         except Exception:
             pass
+        try:
+            await conn.execute(text("UPDATE usuarios SET is_public = TRUE WHERE is_public IS NULL"))
+        except Exception:
+            pass
 
     async with SessionLocal() as session:
         result = await session.execute(select(Usuario).where(Usuario.username == settings.admin_username))

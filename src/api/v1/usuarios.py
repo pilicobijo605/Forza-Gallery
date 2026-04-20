@@ -22,20 +22,28 @@ async def get_perfil(username: str, db: DbSession, viewer: OptionalUser):
     user = await repo.get_by_username(username)
     if not user:
         raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Usuario no encontrado")
-    if not user.is_public:
+    if user.is_public is False:
         raise HTTPException(status_code=status.HTTP_403_FORBIDDEN, detail="Este perfil es privado")
     seg_repo = SeguidorRepository(db)
     fav_repo = FavoritoUsuarioRepository(db)
+    try:
+        seguidores  = await seg_repo.count_seguidores(user.id)
+        siguiendo   = await seg_repo.count_siguiendo(user.id)
+        yo_sigo     = await seg_repo.is_siguiendo(viewer.id, user.id) if viewer else False
+        es_favorito = await fav_repo.is_favorito(viewer.id, user.id) if viewer else False
+    except Exception:
+        seguidores = siguiendo = 0
+        yo_sigo = es_favorito = False
     return PerfilOut(
         username=user.username,
         bio=user.bio,
         avatar_url=user.avatar_url,
-        is_public=user.is_public,
+        is_public=user.is_public if user.is_public is not None else True,
         created_at=user.created_at,
-        seguidores=await seg_repo.count_seguidores(user.id),
-        siguiendo=await seg_repo.count_siguiendo(user.id),
-        yo_sigo=await seg_repo.is_siguiendo(viewer.id, user.id) if viewer else False,
-        es_favorito=await fav_repo.is_favorito(viewer.id, user.id) if viewer else False,
+        seguidores=seguidores,
+        siguiendo=siguiendo,
+        yo_sigo=yo_sigo,
+        es_favorito=es_favorito,
     )
 
 
