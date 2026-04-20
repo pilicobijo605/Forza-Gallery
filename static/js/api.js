@@ -73,6 +73,46 @@ async function deleteImagen(id) {
   return apiFetch(`/imagenes/${id}`, { method: "DELETE" });
 }
 
+async function getLikes(imagenId) {
+  return apiFetch(`/social/imagenes/${imagenId}/likes`);
+}
+
+async function toggleLike(imagenId) {
+  return apiFetch(`/social/imagenes/${imagenId}/like`, { method: "POST" });
+}
+
+async function toggleGuardado(imagenId) {
+  return apiFetch(`/social/imagenes/${imagenId}/guardar`, { method: "POST" });
+}
+
+async function getComentarios(imagenId) {
+  return apiFetch(`/social/imagenes/${imagenId}/comentarios`);
+}
+
+async function addComentario(imagenId, contenido) {
+  return apiFetch(`/social/imagenes/${imagenId}/comentarios`, {
+    method: "POST",
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify({ contenido }),
+  });
+}
+
+async function deleteComentario(comentarioId) {
+  return apiFetch(`/social/comentarios/${comentarioId}`, { method: "DELETE" });
+}
+
+async function reportarComentario(comentarioId, motivo = null) {
+  return apiFetch(`/social/comentarios/${comentarioId}/reportar`, {
+    method: "POST",
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify({ motivo }),
+  });
+}
+
+async function getMisGuardados() {
+  return apiFetch("/social/mis-guardados");
+}
+
 async function login(username, password) {
   const body = new URLSearchParams({ username, password });
   const res = await fetch(`${BASE}/auth/login`, {

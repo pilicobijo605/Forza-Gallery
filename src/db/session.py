@@ -18,6 +18,7 @@ async def get_session():
 
 async def init_db():
     from src.models import usuario, imagen, tag  # noqa: F401
+    from src.models import like, guardado, comentario  # noqa: F401
     from src.models.usuario import Usuario
     from src.core.security import hash_password
     from sqlalchemy import select

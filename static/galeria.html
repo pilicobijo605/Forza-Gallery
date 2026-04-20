@@ -45,7 +45,10 @@
   <div class="lightbox" id="lightbox">
     <button class="lightbox-close" id="lb-close">✕</button>
     <div class="lb-panel">
-      <div class="lb-title-bar" id="lb-title"></div>
+      <div class="lb-header">
+        <div class="lb-title-bar" id="lb-title"></div>
+        <button class="lb-date" id="lb-date"></button>
+      </div>
       <div class="lb-img-wrap">
         <img id="lb-img" src="" alt="" />
       </div>
@@ -57,8 +60,28 @@
         </div>
         <div class="lb-info-right">
           <a class="lb-username" id="lb-username" href="#">@—</a>
-          <button class="lb-date" id="lb-date"></button>
+          <div class="lb-actions">
+            <button class="lb-action-btn" id="lb-like-btn" title="Like">
+              <span class="lb-action-icon">♡</span><span id="lb-like-count">0</span>
+            </button>
+            <button class="lb-action-btn" id="lb-save-btn" title="Guardar">
+              <span class="lb-action-icon">🔖</span>
+            </button>
+            <button class="lb-action-btn" id="lb-comment-btn" title="Comentarios">
+              <span class="lb-action-icon">💬</span><span id="lb-comment-count">0</span>
+            </button>
+          </div>
         </div>
+      </div>
+      <div class="lb-comments" id="lb-comments">
+        <div class="lb-comments-list" id="lb-comments-list"></div>
+        <div class="lb-comment-form" id="lb-comment-form" style="display:none">
+          <input class="lb-comment-input" id="lb-comment-input" placeholder="Añadir comentario..." maxlength="500" />
+          <button class="lb-comment-submit" id="lb-comment-submit">Enviar</button>
+        </div>
+        <p class="lb-login-hint" id="lb-login-hint" style="display:none">
+          <a href="/login.html">Inicia sesión</a> para comentar, dar like o guardar
+        </p>
       </div>
     </div>
   </div>
@@ -135,7 +158,11 @@
       return tags.map(t => `<span class="hashtag" data-tag="${t}">#${t}</span>`).join("");
     }
 
+    let currentLbId = null;
+
     function openLightbox(img) {
+      currentLbId = img.id;
+
       document.getElementById("lb-img").src = img.filename;
       document.getElementById("lb-img").alt = img.titulo;
       document.getElementById("lb-title").textContent = img.titulo;
@@ -173,12 +200,138 @@
         setDateFilter(dateOnly);
       };
 
+      document.getElementById("lb-like-count").textContent = "0";
+      document.getElementById("lb-like-btn").className = "lb-action-btn";
+      document.getElementById("lb-save-btn").className = "lb-action-btn";
+      document.getElementById("lb-comments-list").innerHTML = "";
+      document.getElementById("lb-comment-input") && (document.getElementById("lb-comment-input").value = "");
+
       document.getElementById("lightbox").classList.add("open");
+      loadLbSocial(img.id);
     }
 
     function closeLightbox() {
       document.getElementById("lightbox").classList.remove("open");
+      currentLbId = null;
     }
+
+    function updateLikeBtn(liked, count) {
+      const btn = document.getElementById("lb-like-btn");
+      btn.className = "lb-action-btn" + (liked ? " liked" : "");
+      btn.querySelector(".lb-action-icon").textContent = liked ? "♥" : "♡";
+      document.getElementById("lb-like-count").textContent = count;
+    }
+
+    function renderComentarios(comentarios, imagenId) {
+      const list = document.getElementById("lb-comments-list");
+      document.getElementById("lb-comment-count").textContent = comentarios.length;
+      if (!comentarios.length) { list.innerHTML = ""; return; }
+      list.innerHTML = comentarios.map(c => `
+        <div class="lb-comment-item" data-id="${c.id}" data-uid="${c.usuario_id}">
+          <div class="lb-comment-body">
+            <span class="lb-comment-author">${c.username}</span>
+            <span class="lb-comment-text">${c.contenido.replace(/</g,"&lt;")}</span>
+          </div>
+          <div class="lb-comment-actions">
+            ${currentUser && currentUser.id === c.usuario_id
+              ? `<button class="lb-comment-action delete" data-id="${c.id}" title="Eliminar">🗑</button>`
+              : (currentUser
+                  ? `<button class="lb-comment-action report" data-id="${c.id}" title="Reportar">⚑</button>`
+                  : "")}
+          </div>
+        </div>
+      `).join("");
+
+      list.querySelectorAll(".delete").forEach(btn =>
+        btn.addEventListener("click", async () => {
+          try {
+            await deleteComentario(btn.dataset.id);
+            const cs = await getComentarios(imagenId);
+            renderComentarios(cs, imagenId);
+          } catch(e) { showToast(e.message, "error"); }
+        })
+      );
+      list.querySelectorAll(".report").forEach(btn =>
+        btn.addEventListener("click", async () => {
+          try {
+            await reportarComentario(btn.dataset.id);
+            showToast("Comentario reportado", "info");
+            btn.disabled = true;
+          } catch(e) { showToast(e.message, "error"); }
+        })
+      );
+    }
+
+    async function loadLbSocial(imagenId) {
+      try {
+        const likes = await getLikes(imagenId);
+        updateLikeBtn(likes.liked, likes.count);
+      } catch {}
+      try {
+        const cs = await getComentarios(imagenId);
+        renderComentarios(cs, imagenId);
+      } catch {}
+
+      const commentForm = document.getElementById("lb-comment-form");
+      const loginHint   = document.getElementById("lb-login-hint");
+      if (isLoggedIn()) {
+        commentForm.style.display = "flex";
+        loginHint.style.display   = "none";
+      } else {
+        commentForm.style.display = "none";
+        loginHint.style.display   = "block";
+      }
+
+      if (isLoggedIn()) {
+        try {
+          const guardados = await getMisGuardados();
+          const saved = guardados.some(g => g.id === imagenId);
+          document.getElementById("lb-save-btn").className = "lb-action-btn" + (saved ? " saved" : "");
+        } catch {}
+      }
+    }
+
+    document.getElementById("lb-like-btn").addEventListener("click", async () => {
+      if (!isLoggedIn()) { showToast("Inicia sesión para dar like", "info"); return; }
+      try {
+        const res = await toggleLike(currentLbId);
+        updateLikeBtn(res.liked, res.count);
+      } catch(e) { showToast(e.message, "error"); }
+    });
+
+    document.getElementById("lb-save-btn").addEventListener("click", async () => {
+      if (!isLoggedIn()) { showToast("Inicia sesión para guardar", "info"); return; }
+      try {
+        const res = await toggleGuardado(currentLbId);
+        document.getElementById("lb-save-btn").className = "lb-action-btn" + (res.guardado ? " saved" : "");
+        showToast(res.guardado ? "Guardado" : "Eliminado de guardados", res.guardado ? "success" : "info");
+      } catch(e) { showToast(e.message, "error"); }
+    });
+
+    document.getElementById("lb-comment-btn").addEventListener("click", () => {
+      document.getElementById("lb-comment-input")?.focus();
+    });
+
+    document.getElementById("lb-comment-submit").addEventListener("click", async () => {
+      const input = document.getElementById("lb-comment-input");
+      const contenido = input.value.trim();
+      if (!contenido) return;
+      try {
+        await addComentario(currentLbId, contenido);
+        input.value = "";
+        const cs = await getComentarios(currentLbId);
+        renderComentarios(cs, currentLbId);
+        const list = document.getElementById("lb-comments-list");
+        list.scrollTop = list.scrollHeight;
+      } catch(e) { showToast(e.message, "error"); }
+    });
+
+    document.getElementById("lb-comment-input")?.addEventListener("keydown", (e) => {
+      if (e.key === "Enter" && !e.shiftKey) {
+        e.preventDefault();
+        document.getElementById("lb-comment-submit").click();
+      }
+    });
 
     document.getElementById("lb-close").addEventListener("click", closeLightbox);
     document.getElementById("lightbox").addEventListener("click", (e) => {
