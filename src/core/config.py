@@ -7,7 +7,7 @@ class Settings(BaseSettings):
     secret_key: str = "cambia-esto"
     access_token_expire_minutes: int = 1440
     admin_username: str = "admin"
-    admin_email: str = "admin@forzagram.com"
+    admin_email: str = "admin@forzagallery.com"
     admin_password: str = "admin1234"
     cloudinary_cloud_name: str = ""
     cloudinary_api_key: str = ""
