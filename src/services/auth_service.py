@@ -21,7 +21,9 @@ async def register(data: UsuarioCreate, db: AsyncSession) -> RegisterResponse:
 
     try:
         await send_verification_email(user.email, user.username, token)
-    except Exception:
+    except Exception as e:
+        import logging
+        logging.error(f"SMTP error: {type(e).__name__}: {e}")
         await db.delete(user)
         await db.commit()
         raise HTTPException(
