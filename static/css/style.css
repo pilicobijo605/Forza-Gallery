@@ -4,9 +4,9 @@
   --bg:        #080808;
   --surface:   #101010;
   --surface2:  #181818;
-  --teal:      #00c8ff;
-  --teal-dim:  rgba(0,200,255,0.12);
-  --teal-glow: rgba(0,200,255,0.25);
+  --teal:      #EC377C;
+  --teal-dim:  rgba(236,55,124,0.12);
+  --teal-glow: rgba(236,55,124,0.25);
   --white:     #ffffff;
   --muted:     #777777;
   --border:    #1e1e1e;
@@ -105,7 +105,7 @@ img { max-width: 100%; display: block; }
 /* ── TEAL DIVIDER (forza.net signature) ── */
 .teal-divider {
   height: 3px;
-  background: linear-gradient(90deg, transparent, var(--teal), transparent);
+  background: linear-gradient(90deg, transparent, #EC377C, #F8615C, #FE784B, transparent);
   width: 100%;
 }
 
@@ -127,8 +127,8 @@ img { max-width: 100%; display: block; }
   position: absolute;
   inset: 0;
   background:
-    radial-gradient(ellipse 70% 50% at 50% 0%, rgba(0,200,255,0.07) 0%, transparent 70%),
-    radial-gradient(ellipse 50% 40% at 80% 100%, rgba(0,200,255,0.04) 0%, transparent 60%);
+    radial-gradient(ellipse 70% 50% at 50% 0%, rgba(236,55,124,0.07) 0%, transparent 70%),
+    radial-gradient(ellipse 50% 40% at 80% 100%, rgba(248,97,92,0.04) 0%, transparent 60%);
   pointer-events: none;
 }
 
