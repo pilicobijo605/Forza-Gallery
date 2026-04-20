@@ -98,6 +98,13 @@
         document.getElementById("perfil-loading").style.display = "none";
         document.getElementById("perfil-content").style.display = "block";
 
+        const avatarEl = document.getElementById("perfil-avatar");
+        avatarEl.style.cursor = "zoom-in";
+        avatarEl.addEventListener("click", () => {
+          document.getElementById("avatar-zoom-img").src = avatarEl.src;
+          avatarZoom.classList.add("open");
+        });
+
         document.title = `${perfil.username} — Forza Gallery`;
         document.getElementById("perfil-username").textContent = `@${perfil.username}`;
         document.getElementById("perfil-bio").textContent = perfil.bio || "";
@@ -158,11 +165,6 @@
     }
 
     const avatarZoom = document.getElementById("avatar-zoom");
-    document.getElementById("perfil-avatar").addEventListener("click", () => {
-      const src = document.getElementById("perfil-avatar").src;
-      document.getElementById("avatar-zoom-img").src = src;
-      avatarZoom.classList.add("open");
-    });
     avatarZoom.addEventListener("click", () => avatarZoom.classList.remove("open"));
 
     function openLightbox(img) {
