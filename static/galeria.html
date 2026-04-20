@@ -47,6 +47,7 @@
     <div class="lb-panel">
       <div class="lb-header">
         <div class="lb-title-bar" id="lb-title"></div>
+        <button class="lb-edit-toggle" id="lb-edit-toggle" style="display:none" title="Editar">✏️</button>
         <button class="lb-date" id="lb-date"></button>
       </div>
       <div class="lb-img-wrap">
@@ -71,6 +72,25 @@
               <span class="lb-action-icon">💬</span><span id="lb-comment-count">0</span>
             </button>
           </div>
+        </div>
+      </div>
+
+      <div class="lb-edit-form" id="lb-edit-form" style="display:none">
+        <input class="lb-edit-input" id="lb-edit-titulo" placeholder="Título" maxlength="200" />
+        <div class="lb-edit-row">
+          <select class="lb-edit-select" id="lb-edit-juego">
+            <option value="FH1">FH1</option>
+            <option value="FH2">FH2</option>
+            <option value="FH3">FH3</option>
+            <option value="FH4">FH4</option>
+            <option value="FH5">FH5</option>
+          </select>
+          <input class="lb-edit-input" id="lb-edit-tags" placeholder="Tags (separados por espacio)" />
+        </div>
+        <textarea class="lb-edit-textarea" id="lb-edit-desc" placeholder="Descripción (opcional)" maxlength="500"></textarea>
+        <div class="lb-edit-actions">
+          <button class="lb-edit-btn lb-edit-btn-cancel" id="lb-edit-cancel">Cancelar</button>
+          <button class="lb-edit-btn lb-edit-btn-save" id="lb-edit-save">Guardar</button>
         </div>
       </div>
 
@@ -159,10 +179,12 @@
       return tags.map(t => `<span class="hashtag" data-tag="${t}">#${t}</span>`).join("");
     }
 
-    let currentLbId = null;
+    let currentLbId   = null;
+    let currentLbData = null;
 
     function openLightbox(img) {
-      currentLbId = img.id;
+      currentLbId   = img.id;
+      currentLbData = img;
 
       document.getElementById("lb-img").src = img.filename;
       document.getElementById("lb-img").alt = img.titulo;
@@ -206,6 +228,11 @@
       document.getElementById("lb-save-btn").className = "lb-action-btn";
       document.getElementById("lb-comments-list").innerHTML = "";
       document.getElementById("lb-comment-input") && (document.getElementById("lb-comment-input").value = "");
+      document.getElementById("lb-edit-form").style.display = "none";
+      document.getElementById("lb-edit-toggle").className = "lb-edit-toggle";
+
+      const editBtn = document.getElementById("lb-edit-toggle");
+      editBtn.style.display = (currentUser && currentUser.id === img.usuario_id) ? "inline-flex" : "none";
 
       document.getElementById("lightbox").classList.add("open");
       loadLbSocial(img.id);
@@ -213,7 +240,10 @@
 
     function closeLightbox() {
       document.getElementById("lightbox").classList.remove("open");
-      currentLbId = null;
+      document.getElementById("lb-edit-form").style.display = "none";
+      document.getElementById("lb-edit-toggle").className = "lb-edit-toggle";
+      currentLbId   = null;
+      currentLbData = null;
     }
 
     function updateLikeBtn(liked, count) {
@@ -462,6 +492,67 @@
         b.classList.toggle("active", b.dataset.juego === currentJuego);
       });
     }
+
+    document.getElementById("lb-edit-toggle").addEventListener("click", () => {
+      const form    = document.getElementById("lb-edit-form");
+      const toggler = document.getElementById("lb-edit-toggle");
+      const open    = form.style.display !== "none";
+      if (open) {
+        form.style.display = "none";
+        toggler.classList.remove("active");
+      } else {
+        document.getElementById("lb-edit-titulo").value = currentLbData.titulo || "";
+        document.getElementById("lb-edit-juego").value  = currentLbData.juego  || "FH5";
+        document.getElementById("lb-edit-tags").value   = (currentLbData.tags || []).join(" ");
+        document.getElementById("lb-edit-desc").value   = currentLbData.descripcion || "";
+        form.style.display = "flex";
+        toggler.classList.add("active");
+        document.getElementById("lb-edit-titulo").focus();
+      }
+    });
+
+    document.getElementById("lb-edit-cancel").addEventListener("click", () => {
+      document.getElementById("lb-edit-form").style.display = "none";
+      document.getElementById("lb-edit-toggle").classList.remove("active");
+    });
+
+    document.getElementById("lb-edit-save").addEventListener("click", async () => {
+      const titulo = document.getElementById("lb-edit-titulo").value.trim();
+      if (!titulo) { showToast("El título no puede estar vacío", "error"); return; }
+      const btn = document.getElementById("lb-edit-save");
+      btn.disabled = true;
+      try {
+        const updated = await updateImagen(currentLbId, {
+          titulo,
+          juego:       document.getElementById("lb-edit-juego").value,
+          descripcion: document.getElementById("lb-edit-desc").value.trim() || null,
+          tags:        document.getElementById("lb-edit-tags").value,
+        });
+        currentLbData = updated;
+        document.getElementById("lb-title").textContent = updated.titulo;
+        const badge = document.getElementById("lb-juego");
+        badge.textContent = updated.juego;
+        badge.className   = `juego-badge ${updated.juego}`;
+        const lbTags = document.getElementById("lb-tags");
+        lbTags.innerHTML  = (updated.tags || []).map(t => `<span class="hashtag" data-tag="${t}">#${t}</span>`).join("");
+        lbTags.querySelectorAll(".hashtag").forEach(el =>
+          el.addEventListener("click", () => {
+            closeLightbox();
+            history.replaceState(null, "", `?tag=${el.dataset.tag}`);
+            setTagFilter(el.dataset.tag);
+          })
+        );
+        document.getElementById("lb-desc").textContent = updated.descripcion || "";
+        document.getElementById("lb-edit-form").style.display = "none";
+        document.getElementById("lb-edit-toggle").classList.remove("active");
+        showToast("Imagen actualizada", "success");
+        loadGallery();
+      } catch(e) {
+        showToast(e.message, "error");
+      } finally {
+        btn.disabled = false;
+      }
+    });
 
     loadUser().then(loadGallery);
   </script>

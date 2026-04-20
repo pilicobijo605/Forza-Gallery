@@ -1,7 +1,7 @@
 from fastapi import APIRouter, Form, UploadFile
 
 from src.core.dependencies import CurrentActiveUser, DbSession
-from src.schemas.imagen import ImagenOut
+from src.schemas.imagen import ImagenOut, ImagenUpdate
 from src.services import imagen_service
 
 router = APIRouter(prefix="/imagenes", tags=["imagenes"])
@@ -41,6 +41,13 @@ async def upload_imagen(
     tags: str | None = Form(None),
 ):
     return await imagen_service.upload_imagen(db, file, titulo, juego, descripcion, tags, user.id)
+
+
+@router.put("/{imagen_id}", response_model=ImagenOut)
+async def update_imagen(imagen_id: int, body: ImagenUpdate, db: DbSession, user: CurrentActiveUser):
+    return await imagen_service.update_imagen(
+        db, imagen_id, user.id, body.titulo, body.juego, body.descripcion, body.tags
+    )
 
 
 @router.delete("/{imagen_id}", status_code=204)

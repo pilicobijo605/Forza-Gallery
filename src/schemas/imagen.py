@@ -3,6 +3,13 @@ from datetime import datetime
 from pydantic import BaseModel, field_validator, model_validator
 
 
+class ImagenUpdate(BaseModel):
+    titulo: str
+    juego: str
+    descripcion: str | None = None
+    tags: str = ""
+
+
 class ImagenOut(BaseModel):
     id: int
     titulo: str

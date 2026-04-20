@@ -74,6 +74,22 @@ class ImagenRepository:
         await self.db.refresh(img)
         return img
 
+    async def update(
+        self,
+        imagen: Imagen,
+        titulo: str,
+        juego: str,
+        descripcion: str | None,
+        tags: list,
+    ) -> Imagen:
+        imagen.titulo = titulo
+        imagen.juego = juego
+        imagen.descripcion = descripcion or None
+        imagen.tags = tags
+        await self.db.commit()
+        await self.db.refresh(imagen)
+        return imagen
+
     async def delete(self, imagen: Imagen) -> None:
         await self.db.delete(imagen)
         await self.db.commit()

@@ -86,6 +86,7 @@
     <div class="lb-panel">
       <div class="lb-header">
         <div class="lb-title-bar" id="lb-title"></div>
+        <button class="lb-edit-toggle" id="lb-edit-toggle" style="display:none" title="Editar">✏️</button>
         <button class="lb-date" id="lb-date"></button>
       </div>
       <div class="lb-img-wrap">
@@ -112,6 +113,25 @@
           </div>
         </div>
       </div>
+      <div class="lb-edit-form" id="lb-edit-form" style="display:none">
+        <input class="lb-edit-input" id="lb-edit-titulo" placeholder="Título" maxlength="200" />
+        <div class="lb-edit-row">
+          <select class="lb-edit-select" id="lb-edit-juego">
+            <option value="FH1">FH1</option>
+            <option value="FH2">FH2</option>
+            <option value="FH3">FH3</option>
+            <option value="FH4">FH4</option>
+            <option value="FH5">FH5</option>
+          </select>
+          <input class="lb-edit-input" id="lb-edit-tags" placeholder="Tags (separados por espacio)" />
+        </div>
+        <textarea class="lb-edit-textarea" id="lb-edit-desc" placeholder="Descripción (opcional)" maxlength="500"></textarea>
+        <div class="lb-edit-actions">
+          <button class="lb-edit-btn lb-edit-btn-cancel" id="lb-edit-cancel">Cancelar</button>
+          <button class="lb-edit-btn lb-edit-btn-save" id="lb-edit-save">Guardar</button>
+        </div>
+      </div>
+
       <div class="lb-comments" id="lb-comments">
         <div class="lb-comments-list" id="lb-comments-list"></div>
         <div class="lb-comment-form" id="lb-comment-form" style="display:none">
@@ -218,10 +238,12 @@
     avatarZoom.addEventListener("click", () => avatarZoom.classList.remove("open"));
 
     let currentLbId = null;
+    let currentLbData = null;
     let meUser = null;
 
     function openLightbox(img) {
       currentLbId = img.id;
+      currentLbData = img;
 
       document.getElementById("lb-img").src = img.filename;
       document.getElementById("lb-img").alt = img.titulo;
@@ -246,6 +268,11 @@
         d.toLocaleTimeString("es-ES",{hour:"2-digit",minute:"2-digit"});
       dateEl.onclick = () => window.location.href = `/galeria.html?fecha=${dateOnly}`;
 
+      const editToggle = document.getElementById("lb-edit-toggle");
+      editToggle.style.display = (meUser && meUser.id === img.usuario_id) ? "flex" : "none";
+      document.getElementById("lb-edit-form").style.display = "none";
+      editToggle.classList.remove("active");
+
       document.getElementById("lb-like-count").textContent = "0";
       document.getElementById("lb-like-btn").className = "lb-action-btn";
       document.getElementById("lb-save-btn").className = "lb-action-btn";
@@ -259,7 +286,10 @@
 
     function closeLightbox() {
       document.getElementById("lightbox").classList.remove("open");
+      document.getElementById("lb-edit-form").style.display = "none";
+      document.getElementById("lb-edit-toggle").classList.remove("active");
       currentLbId = null;
+      currentLbData = null;
     }
 
     function updateLikeBtn(liked, count) {
@@ -419,6 +449,55 @@
     document.getElementById("lb-close").addEventListener("click", closeLightbox);
     document.getElementById("lightbox").addEventListener("click", (e) => {
       if (e.target === document.getElementById("lightbox")) closeLightbox();
+    });
+
+    document.getElementById("lb-edit-toggle").addEventListener("click", () => {
+      if (!currentLbData) return;
+      const form = document.getElementById("lb-edit-form");
+      const visible = form.style.display !== "none";
+      if (visible) {
+        form.style.display = "none";
+        document.getElementById("lb-edit-toggle").classList.remove("active");
+      } else {
+        document.getElementById("lb-edit-titulo").value = currentLbData.titulo || "";
+        document.getElementById("lb-edit-juego").value = currentLbData.juego || "FH5";
+        document.getElementById("lb-edit-tags").value = (currentLbData.tags || []).join(" ");
+        document.getElementById("lb-edit-desc").value = currentLbData.descripcion || "";
+        form.style.display = "flex";
+        document.getElementById("lb-edit-toggle").classList.add("active");
+      }
+    });
+
+    document.getElementById("lb-edit-cancel").addEventListener("click", () => {
+      document.getElementById("lb-edit-form").style.display = "none";
+      document.getElementById("lb-edit-toggle").classList.remove("active");
+    });
+
+    document.getElementById("lb-edit-save").addEventListener("click", async () => {
+      if (!currentLbId) return;
+      const titulo = document.getElementById("lb-edit-titulo").value.trim();
+      const juego  = document.getElementById("lb-edit-juego").value;
+      const tags   = document.getElementById("lb-edit-tags").value.trim();
+      const desc   = document.getElementById("lb-edit-desc").value.trim();
+      if (!titulo) { showToast("El título no puede estar vacío", "error"); return; }
+      try {
+        const updated = await updateImagen(currentLbId, { titulo, juego, descripcion: desc || null, tags });
+        currentLbData = updated;
+        document.getElementById("lb-title").textContent = updated.titulo;
+        document.getElementById("lb-desc").textContent = updated.descripcion || "";
+        const badge = document.getElementById("lb-juego");
+        badge.textContent = updated.juego;
+        badge.className = `juego-badge ${updated.juego}`;
+        const lbTags = document.getElementById("lb-tags");
+        lbTags.innerHTML = (updated.tags||[]).map(t=>`<span class="hashtag" data-tag="${t}">#${t}</span>`).join("");
+        lbTags.querySelectorAll(".hashtag").forEach(el =>
+          el.addEventListener("click", () => window.location.href = `/galeria.html?tag=${el.dataset.tag}`)
+        );
+        document.getElementById("lb-edit-form").style.display = "none";
+        document.getElementById("lb-edit-toggle").classList.remove("active");
+        showToast("Imagen actualizada", "success");
+        loadPerfil();
+      } catch(e) { showToast(e.message, "error"); }
     });
 
     async function loadGuardados() {

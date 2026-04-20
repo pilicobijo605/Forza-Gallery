@@ -84,6 +84,29 @@ async def upload_imagen(
     return ImagenOut.model_validate(img)
 
 
+async def update_imagen(
+    db: AsyncSession,
+    imagen_id: int,
+    usuario_id: int,
+    titulo: str,
+    juego: str,
+    descripcion: str | None,
+    tags_raw: str,
+) -> ImagenOut:
+    repo = ImagenRepository(db)
+    img = await repo.get_by_id(imagen_id)
+    if not img:
+        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Imagen no encontrada")
+    if img.usuario_id != usuario_id:
+        raise HTTPException(status_code=status.HTTP_403_FORBIDDEN, detail="Sin permiso")
+
+    tag_names = parse_tags(tags_raw) if tags_raw else []
+    tags = await TagRepository(db).get_or_create_many(tag_names)
+
+    img = await repo.update(img, titulo, juego, descripcion, tags)
+    return ImagenOut.model_validate(img)
+
+
 async def delete_imagen(db: AsyncSession, imagen_id: int, usuario_id: int) -> None:
     repo = ImagenRepository(db)
     img = await repo.get_by_id(imagen_id)

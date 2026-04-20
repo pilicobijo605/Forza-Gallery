@@ -73,6 +73,14 @@ async function deleteImagen(id) {
   return apiFetch(`/imagenes/${id}`, { method: "DELETE" });
 }
 
+async function updateImagen(id, data) {
+  return apiFetch(`/imagenes/${id}`, {
+    method: "PUT",
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify(data),
+  });
+}
+
 async function getLikes(imagenId) {
   return apiFetch(`/social/imagenes/${imagenId}/likes`);
 }

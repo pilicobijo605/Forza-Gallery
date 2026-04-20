@@ -1260,6 +1260,89 @@ img { max-width: 100%; display: block; }
 .lb-login-hint a { color: var(--teal); font-weight: 600; }
 .lb-login-hint a:hover { text-decoration: underline; }
 
+/* ── LIGHTBOX EDIT ── */
+.lb-edit-toggle {
+  background: transparent;
+  border: 1px solid var(--border);
+  border-radius: var(--radius);
+  color: var(--muted);
+  font-size: 0.85rem;
+  padding: 0.15rem 0.5rem;
+  cursor: pointer;
+  transition: color 0.15s, border-color 0.15s;
+  flex-shrink: 0;
+  line-height: 1.4;
+}
+
+.lb-edit-toggle:hover,
+.lb-edit-toggle.active {
+  color: var(--white);
+  border-color: rgba(255,255,255,0.3);
+}
+
+.lb-edit-form {
+  width: 100%;
+  border-top: 1px solid var(--border);
+  padding-top: 0.75rem;
+  margin-top: 0.5rem;
+  display: flex;
+  flex-direction: column;
+  gap: 0.55rem;
+}
+
+.lb-edit-row {
+  display: flex;
+  gap: 0.5rem;
+}
+
+.lb-edit-input,
+.lb-edit-select,
+.lb-edit-textarea {
+  width: 100%;
+  background: var(--surface);
+  border: 1px solid var(--border);
+  border-radius: var(--radius);
+  color: var(--white);
+  font-family: var(--font-body);
+  font-size: 0.9rem;
+  padding: 0.5rem 0.75rem;
+  outline: none;
+  transition: border-color 0.2s;
+}
+
+.lb-edit-input:focus,
+.lb-edit-select:focus,
+.lb-edit-textarea:focus { border-color: var(--teal); }
+
+.lb-edit-select { width: auto; flex-shrink: 0; cursor: pointer; }
+.lb-edit-select option { background: var(--surface2); }
+.lb-edit-textarea { resize: vertical; min-height: 64px; }
+.lb-edit-row .lb-edit-input { flex: 1; }
+
+.lb-edit-actions {
+  display: flex;
+  gap: 0.5rem;
+  justify-content: flex-end;
+}
+
+.lb-edit-btn {
+  font-family: var(--font-cond);
+  font-size: 0.82rem;
+  font-weight: 700;
+  letter-spacing: 1px;
+  text-transform: uppercase;
+  padding: 0.45rem 1.2rem;
+  border-radius: var(--radius);
+  border: none;
+  cursor: pointer;
+  transition: background 0.15s;
+}
+
+.lb-edit-btn-save   { background: var(--teal); color: #000; }
+.lb-edit-btn-save:hover { filter: brightness(1.15); }
+.lb-edit-btn-cancel { background: var(--surface2); color: var(--muted); border: 1px solid var(--border); }
+.lb-edit-btn-cancel:hover { color: var(--white); }
+
 /* ── LB USERNAME in left column ── */
 .lb-info-left .lb-username {
   flex-basis: 100%;
