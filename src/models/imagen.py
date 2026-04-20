@@ -21,5 +21,5 @@ class Imagen(Base):
         DateTime(timezone=True), default=lambda: datetime.now(timezone.utc)
     )
 
-    usuario: Mapped["Usuario"] = relationship(back_populates="imagenes")  # noqa: F821
+    usuario: Mapped["Usuario"] = relationship(back_populates="imagenes", lazy="selectin")  # noqa: F821
     tags: Mapped[list[Tag]] = relationship(secondary=imagen_tags, lazy="selectin")

@@ -551,45 +551,18 @@ img { max-width: 100%; display: block; }
   display: none;
   position: fixed;
   inset: 0;
-  background: rgba(0,0,0,0.95);
+  background: rgba(0,0,0,0.96);
   z-index: 500;
   align-items: center;
   justify-content: center;
-  flex-direction: column;
   padding: 1rem;
+  overflow-y: auto;
 }
 
 .lightbox.open { display: flex; }
 
-.lightbox img {
-  max-width: min(100%, 900px);
-  max-height: 70vh;
-  object-fit: contain;
-}
-
-.lightbox-info {
-  margin-top: 1.25rem;
-  text-align: center;
-  max-width: 600px;
-}
-
-.lightbox-title {
-  font-family: var(--font-display);
-  font-size: clamp(1.2rem, 4vw, 1.8rem);
-  letter-spacing: 2px;
-  color: var(--white);
-  margin-bottom: 0.4rem;
-}
-
-.lightbox-desc {
-  color: var(--muted);
-  font-size: 0.9rem;
-  margin-bottom: 0.6rem;
-  line-height: 1.6;
-}
-
 .lightbox-close {
-  position: absolute;
+  position: fixed;
   top: 1rem;
   right: 1rem;
   background: rgba(255,255,255,0.08);
@@ -604,9 +577,115 @@ img { max-width: 100%; display: block; }
   align-items: center;
   justify-content: center;
   transition: background 0.2s;
+  z-index: 10;
 }
 
 .lightbox-close:hover { background: rgba(0,200,255,0.2); }
+
+.lb-panel {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  width: 100%;
+  max-width: min(95vw, 1100px);
+}
+
+.lb-img-wrap {
+  position: relative;
+  width: 100%;
+  display: flex;
+  justify-content: center;
+}
+
+.lb-img-wrap img {
+  max-width: 100%;
+  max-height: 78vh;
+  object-fit: contain;
+  display: block;
+  border-radius: 2px;
+}
+
+.lb-title-overlay {
+  position: absolute;
+  top: 0;
+  left: 0;
+  right: 0;
+  padding: 0.75rem 1rem;
+  background: linear-gradient(to bottom, rgba(0,0,0,0.75) 0%, transparent 100%);
+  font-family: var(--font-display);
+  font-size: clamp(1.1rem, 3vw, 1.7rem);
+  letter-spacing: 2px;
+  color: var(--white);
+  pointer-events: none;
+  border-radius: 2px 2px 0 0;
+}
+
+.lb-info-bar {
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: 1rem;
+  width: 100%;
+  padding: 0.65rem 0.25rem 0;
+  flex-wrap: wrap;
+}
+
+.lb-info-left {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+  flex-wrap: wrap;
+}
+
+.lb-info-left .juego-badge {
+  font-size: 0.82rem;
+  padding: 0.2rem 0.7rem;
+}
+
+.lb-info-left .hashtag {
+  font-size: 0.82rem;
+}
+
+.lb-desc {
+  width: 100%;
+  color: var(--muted);
+  font-size: 0.85rem;
+  line-height: 1.5;
+  margin-top: 0.25rem;
+}
+
+.lb-info-right {
+  display: flex;
+  flex-direction: column;
+  align-items: flex-end;
+  gap: 0.1rem;
+  flex-shrink: 0;
+}
+
+.lb-username {
+  font-family: var(--font-cond);
+  font-size: 0.88rem;
+  font-weight: 700;
+  color: var(--teal);
+  letter-spacing: 0.5px;
+  transition: color 0.15s;
+}
+
+.lb-username:hover { color: #fff; }
+
+.lb-date {
+  background: none;
+  border: none;
+  padding: 0;
+  font-family: var(--font-body);
+  font-size: 0.78rem;
+  color: var(--muted);
+  cursor: pointer;
+  transition: color 0.15s;
+  text-align: right;
+}
+
+.lb-date:hover { color: var(--white); }
 
 /* ── FORMULARIO ── */
 .form-container {

@@ -1,3 +1,4 @@
+from datetime import datetime, timezone
 from sqlalchemy import select
 from sqlalchemy.ext.asyncio import AsyncSession
 
@@ -13,6 +14,7 @@ class ImagenRepository:
         self,
         juego: str | None = None,
         tag: str | None = None,
+        fecha: str | None = None,
         skip: int = 0,
         limit: int = 20,
     ) -> list[Imagen]:
@@ -25,6 +27,12 @@ class ImagenRepository:
                     select(imagen_tags.c.imagen_id).join(Tag).where(Tag.name == tag.lower())
                 )
             )
+        if fecha:
+            from datetime import date as date_type
+            d = date_type.fromisoformat(fecha)
+            start = datetime(d.year, d.month, d.day, 0, 0, 0, tzinfo=timezone.utc)
+            end   = datetime(d.year, d.month, d.day, 23, 59, 59, tzinfo=timezone.utc)
+            query = query.where(Imagen.created_at.between(start, end))
         result = await self.db.execute(query)
         return list(result.scalars().all())
 
