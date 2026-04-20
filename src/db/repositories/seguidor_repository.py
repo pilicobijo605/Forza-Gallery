@@ -23,11 +23,15 @@ class SeguidorRepository:
         return bool(await self.db.get(Seguidor, (seguidor_id, seguido_id)))
 
     async def count_seguidores(self, usuario_id: int) -> int:
-        r = await self.db.execute(select(func.count()).where(Seguidor.seguido_id == usuario_id))
+        r = await self.db.execute(
+            select(func.count(Seguidor.seguidor_id)).where(Seguidor.seguido_id == usuario_id)
+        )
         return r.scalar_one()
 
     async def count_siguiendo(self, usuario_id: int) -> int:
-        r = await self.db.execute(select(func.count()).where(Seguidor.seguidor_id == usuario_id))
+        r = await self.db.execute(
+            select(func.count(Seguidor.seguido_id)).where(Seguidor.seguidor_id == usuario_id)
+        )
         return r.scalar_one()
 
     async def get_seguidores(self, usuario_id: int) -> list[Usuario]:
