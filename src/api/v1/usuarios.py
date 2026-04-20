@@ -15,15 +15,13 @@ MAX_AVATAR_SIZE = 5 * 1024 * 1024
 
 
 @router.get("/{username}", response_model=PerfilOut)
-async def get_perfil(username: str, db: DbSession, current_user: CurrentActiveUser = None):
+async def get_perfil(username: str, db: DbSession):
     repo = UsuarioRepository(db)
     user = await repo.get_by_username(username)
     if not user:
         raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Usuario no encontrado")
     if not user.is_public:
-        is_owner = current_user and current_user.username == username
-        if not is_owner:
-            raise HTTPException(status_code=status.HTTP_403_FORBIDDEN, detail="Este perfil es privado")
+        raise HTTPException(status_code=status.HTTP_403_FORBIDDEN, detail="Este perfil es privado")
     return PerfilOut.model_validate(user)
 
 

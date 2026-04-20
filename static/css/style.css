@@ -951,6 +951,17 @@ img { max-width: 100%; display: block; }
   text-transform: uppercase;
 }
 
+.nav-avatar-link { display: flex; align-items: center; padding: 0 0.25rem !important; }
+.nav-avatar {
+  width: 30px;
+  height: 30px;
+  border-radius: 50%;
+  object-fit: cover;
+  border: 1px solid var(--border);
+  transition: border-color 0.2s;
+}
+.nav-avatar-link:hover .nav-avatar { border-color: var(--teal); }
+
 .avatar-edit-wrap {
   display: flex;
   flex-direction: column;
