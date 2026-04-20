@@ -63,8 +63,9 @@
   <script>
     updateNavAuth();
 
-    let currentJuego = "";
-    let currentTag   = new URLSearchParams(location.search).get("tag") || "";
+    const _params    = new URLSearchParams(location.search);
+    let currentJuego = _params.get("juego") || "";
+    let currentTag   = _params.get("tag") || "";
     let currentUser  = null;
 
     async function loadUser() {
@@ -230,6 +231,12 @@
         loadGallery();
       });
     });
+
+    if (currentJuego) {
+      document.querySelectorAll(".filter-btn").forEach(b => {
+        b.classList.toggle("active", b.dataset.juego === currentJuego);
+      });
+    }
 
     loadUser().then(loadGallery);
   </script>
