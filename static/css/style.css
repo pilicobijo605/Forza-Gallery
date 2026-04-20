@@ -919,7 +919,10 @@ img { max-width: 100%; display: block; }
   border: 2px solid var(--border);
   background: var(--surface);
   display: block;
+  cursor: zoom-in;
+  transition: border-color 0.2s;
 }
+.perfil-avatar:hover { border-color: var(--teal); }
 
 .perfil-info { flex: 1; min-width: 200px; }
 
@@ -951,16 +954,41 @@ img { max-width: 100%; display: block; }
   text-transform: uppercase;
 }
 
-.nav-avatar-link { display: flex; align-items: center; padding: 0 0.25rem !important; }
+.nav-avatar-link {
+  display: flex;
+  align-items: center;
+  padding: 0 0.25rem !important;
+  flex-shrink: 0;
+}
 .nav-avatar {
   width: 30px;
   height: 30px;
+  min-width: 30px;
   border-radius: 50%;
   object-fit: cover;
   border: 1px solid var(--border);
   transition: border-color 0.2s;
 }
 .nav-avatar-link:hover .nav-avatar { border-color: var(--teal); }
+
+.avatar-zoom-overlay {
+  display: none;
+  position: fixed;
+  inset: 0;
+  background: rgba(0,0,0,0.92);
+  z-index: 600;
+  align-items: center;
+  justify-content: center;
+  cursor: zoom-out;
+}
+.avatar-zoom-overlay.open { display: flex; }
+.avatar-zoom-overlay img {
+  width: clamp(200px, 50vw, 360px);
+  height: clamp(200px, 50vw, 360px);
+  border-radius: 50%;
+  object-fit: cover;
+  border: 3px solid var(--teal);
+}
 
 .avatar-edit-wrap {
   display: flex;

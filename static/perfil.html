@@ -52,6 +52,10 @@
     </div>
   </main>
 
+  <div class="avatar-zoom-overlay" id="avatar-zoom">
+    <img id="avatar-zoom-img" src="" alt="Avatar" />
+  </div>
+
   <div class="lightbox" id="lightbox">
     <button class="lightbox-close" id="lb-close">✕</button>
     <div class="lb-panel">
@@ -152,6 +156,14 @@
         }
       }
     }
+
+    const avatarZoom = document.getElementById("avatar-zoom");
+    document.getElementById("perfil-avatar").addEventListener("click", () => {
+      const src = document.getElementById("perfil-avatar").src;
+      document.getElementById("avatar-zoom-img").src = src;
+      avatarZoom.classList.add("open");
+    });
+    avatarZoom.addEventListener("click", () => avatarZoom.classList.remove("open"));
 
     function openLightbox(img) {
       document.getElementById("lb-img").src = img.filename;
