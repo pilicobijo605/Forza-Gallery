@@ -346,11 +346,11 @@ img { max-width: 100%; display: block; }
 .gallery-grid {
   display: grid;
   grid-template-columns: 1fr;
-  gap: 1px;
-  background: var(--border);
-  padding: 0 clamp(1rem, 4vw, 2.5rem) clamp(2rem, 5vw, 4rem);
+  gap: clamp(0.5rem, 1.5vw, 0.75rem);
+  padding: clamp(0.75rem, 2vw, 1.25rem) clamp(1rem, 4vw, 2.5rem) clamp(2rem, 5vw, 4rem);
   max-width: 1400px;
   margin: 0 auto;
+  align-content: start;
 }
 
 @media (min-width: 600px)  { .gallery-grid { grid-template-columns: repeat(2, 1fr); } }
