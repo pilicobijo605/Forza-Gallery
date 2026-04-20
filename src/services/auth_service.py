@@ -1,15 +1,13 @@
 import asyncio
-import secrets
 
 from fastapi import HTTPException, status
 from sqlalchemy import text
 from sqlalchemy.ext.asyncio import AsyncSession
 
-from src.core.email import send_verification_email
 from src.core.security import create_access_token, hash_password, verify_password
 from src.db.repositories.usuario_repository import UsuarioRepository
 from src.models.usuario import Usuario
-from src.schemas.usuario import RegisterResponse, Token, UsuarioCreate
+from src.schemas.usuario import Token, UsuarioCreate
 
 
 async def register(data: UsuarioCreate, db: AsyncSession) -> Token:
@@ -22,13 +20,6 @@ async def register(data: UsuarioCreate, db: AsyncSession) -> Token:
     user = await repo.create(data.username, data.email, hash_password(data.password), verification_token=None, is_verified=True)
     return Token(access_token=create_access_token(user.username))
 
-
-async def verify_email(token: str, db: AsyncSession) -> None:
-    repo = UsuarioRepository(db)
-    user = await repo.get_by_verification_token(token)
-    if not user:
-        raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail="Token inválido o expirado")
-    await repo.verify_user(user)
 
 
 async def cambiar_password(user: Usuario, password_actual: str, nueva_password: str, db: AsyncSession) -> None:

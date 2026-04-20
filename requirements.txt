@@ -10,5 +10,4 @@ python-multipart
 python-jose[cryptography]
 bcrypt
 cloudinary
-aiosmtplib
 email-validator
