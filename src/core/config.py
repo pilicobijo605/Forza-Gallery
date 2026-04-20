@@ -9,6 +9,9 @@ class Settings(BaseSettings):
     admin_username: str = "admin"
     admin_email: str = "admin@forzagram.com"
     admin_password: str = "admin1234"
+    cloudinary_cloud_name: str = ""
+    cloudinary_api_key: str = ""
+    cloudinary_api_secret: str = ""
 
     model_config = {"env_file": ".env"}
 

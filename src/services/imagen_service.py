@@ -1,16 +1,32 @@
-import uuid
-from pathlib import Path
+import asyncio
 
+import cloudinary
+import cloudinary.uploader
 from fastapi import HTTPException, UploadFile, status
 from sqlalchemy.ext.asyncio import AsyncSession
 
+from src.core.config import settings
 from src.db.repositories.imagen_repository import ImagenRepository
 from src.db.repositories.tag_repository import TagRepository, parse_tags
 from src.schemas.imagen import ImagenOut
 
-UPLOADS_DIR = Path("static/uploads")
+cloudinary.config(
+    cloud_name=settings.cloudinary_cloud_name,
+    api_key=settings.cloudinary_api_key,
+    api_secret=settings.cloudinary_api_secret,
+    secure=True,
+)
+
 ALLOWED_TYPES = {"image/jpeg", "image/png", "image/webp", "image/gif"}
-MAX_SIZE = 10 * 1024 * 1024  # 10 MB
+MAX_SIZE = 10 * 1024 * 1024
+
+
+def _extract_public_id(url: str) -> str:
+    part = url.split("/upload/")[-1]
+    segments = part.split("/")
+    if segments[0].startswith("v") and segments[0][1:].isdigit():
+        part = "/".join(segments[1:])
+    return part.rsplit(".", 1)[0]
 
 
 async def list_imagenes(
@@ -49,17 +65,20 @@ async def upload_imagen(
     if len(content) > MAX_SIZE:
         raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail="Imagen demasiado grande (máx 10 MB)")
 
-    ext = Path(file.filename or "imagen.jpg").suffix.lower()
-    filename = f"{uuid.uuid4().hex}{ext}"
-    UPLOADS_DIR.mkdir(parents=True, exist_ok=True)
-    (UPLOADS_DIR / filename).write_bytes(content)
+    result = await asyncio.to_thread(
+        cloudinary.uploader.upload,
+        content,
+        folder="forzagram",
+        resource_type="image",
+    )
+    image_url = result["secure_url"]
 
     tag_names = parse_tags(tags_raw) if tags_raw else []
     tag_repo = TagRepository(db)
     tags = await tag_repo.get_or_create_many(tag_names)
 
     repo = ImagenRepository(db)
-    img = await repo.create(titulo, juego, descripcion, filename, usuario_id, tags)
+    img = await repo.create(titulo, juego, descripcion, image_url, usuario_id, tags)
     return ImagenOut.model_validate(img)
 
 
@@ -71,9 +90,8 @@ async def delete_imagen(db: AsyncSession, imagen_id: int, usuario_id: int) -> No
     if img.usuario_id != usuario_id:
         raise HTTPException(status_code=status.HTTP_403_FORBIDDEN, detail="Sin permiso")
 
-    filepath = UPLOADS_DIR / img.filename
-    if filepath.exists():
-        filepath.unlink()
+    public_id = _extract_public_id(img.filename)
+    await asyncio.to_thread(cloudinary.uploader.destroy, public_id)
 
     await repo.delete(img)
 

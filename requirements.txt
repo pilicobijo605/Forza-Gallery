@@ -2,9 +2,11 @@ fastapi
 uvicorn[standard]
 sqlalchemy[asyncio]
 aiosqlite
+asyncpg
 pydantic[email]
 pydantic-settings
 python-dotenv
 python-multipart
 python-jose[cryptography]
 bcrypt
+cloudinary

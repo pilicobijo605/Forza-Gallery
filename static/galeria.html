@@ -112,7 +112,7 @@
     }
 
     function openLightbox(img) {
-      document.getElementById("lb-img").src  = `/uploads/${img.filename}`;
+      document.getElementById("lb-img").src  = img.filename;
       document.getElementById("lb-img").alt  = img.titulo;
       document.getElementById("lb-title").textContent = img.titulo;
       document.getElementById("lb-desc").textContent  = img.descripcion || "";
@@ -175,7 +175,7 @@
 
         grid.innerHTML = imagenes.map((img, i) => `
           <div class="img-card fade-in" style="animation-delay:${i * 0.03}s" data-id="${img.id}">
-            <img class="img-thumb" src="/uploads/${img.filename}" alt="${img.titulo}" loading="lazy"
+            <img class="img-thumb" src="${img.filename}" alt="${img.titulo}" loading="lazy"
               onerror="this.style.display='none'">
             ${currentUser && currentUser.id === img.usuario_id
               ? `<button class="img-delete-btn" data-id="${img.id}" title="Eliminar">🗑</button>`
