@@ -13,10 +13,11 @@ async def list_imagenes(
     juego: str | None = None,
     tag: str | None = None,
     fecha: str | None = None,
+    usuario: str | None = None,
     skip: int = 0,
     limit: int = 20,
 ):
-    return await imagen_service.list_imagenes(db, juego, tag, fecha, skip, limit)
+    return await imagen_service.list_imagenes(db, juego, tag, fecha, usuario, skip, limit)
 
 
 @router.get("/stats")

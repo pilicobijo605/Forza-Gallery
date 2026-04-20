@@ -37,3 +37,12 @@ class UsuarioRepository:
         user.is_verified = True
         user.verification_token = None
         await self.db.commit()
+
+    async def update_profile(self, user: Usuario, bio: str | None, is_public: bool, avatar_url: str | None = None) -> Usuario:
+        user.bio = bio
+        user.is_public = is_public
+        if avatar_url is not None:
+            user.avatar_url = avatar_url
+        await self.db.commit()
+        await self.db.refresh(user)
+        return user

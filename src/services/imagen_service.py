@@ -34,12 +34,13 @@ async def list_imagenes(
     juego: str | None,
     tag: str | None,
     fecha: str | None,
+    usuario: str | None,
     skip: int,
     limit: int,
 ) -> list[ImagenOut]:
     repo = ImagenRepository(db)
     tag_norm = tag.lower() if tag else None
-    return [ImagenOut.model_validate(i) for i in await repo.get_all(juego, tag_norm, fecha, skip, limit)]
+    return [ImagenOut.model_validate(i) for i in await repo.get_all(juego, tag_norm, fecha, usuario, skip, limit)]
 
 
 async def get_imagen(db: AsyncSession, imagen_id: int) -> ImagenOut:

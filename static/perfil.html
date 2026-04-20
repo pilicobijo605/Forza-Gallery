@@ -1,0 +1,136 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Perfil — Forza Gallery</title>
+  <link rel="stylesheet" href="/css/style.css" />
+</head>
+<body>
+
+  <nav class="navbar">
+    <a href="/index.html" class="navbar-brand">FORZA<span class="brand-dot"></span>GALLERY</a>
+    <ul class="navbar-links" id="nav-auth"></ul>
+  </nav>
+
+  <div class="teal-divider"></div>
+
+  <main>
+    <div id="perfil-loading" class="state-box" style="padding:5rem 1rem">
+      <span class="state-icon">⏳</span><p>Cargando perfil...</p>
+    </div>
+
+    <div id="perfil-privado" class="state-box" style="display:none;padding:5rem 1rem">
+      <span class="state-icon">🔒</span><p>Este perfil es privado.</p>
+    </div>
+
+    <div id="perfil-notfound" class="state-box" style="display:none;padding:5rem 1rem">
+      <span class="state-icon">🏎</span><p>Usuario no encontrado.</p>
+    </div>
+
+    <div id="perfil-content" style="display:none">
+      <div class="perfil-header">
+        <div class="perfil-avatar-wrap">
+          <img id="perfil-avatar" src="/img/default-avatar.svg" alt="Avatar" class="perfil-avatar" />
+        </div>
+        <div class="perfil-info">
+          <h1 class="perfil-username" id="perfil-username"></h1>
+          <p class="perfil-bio" id="perfil-bio"></p>
+          <div class="perfil-meta">
+            <span id="perfil-fecha"></span>
+            <span id="perfil-count"></span>
+          </div>
+          <div id="perfil-actions" style="display:none;margin-top:1rem">
+            <a href="/editar-perfil.html" class="btn btn-primary">Editar perfil</a>
+          </div>
+        </div>
+      </div>
+
+      <div class="teal-divider" style="margin:0"></div>
+
+      <div class="gallery-grid" id="perfil-gallery"></div>
+    </div>
+  </main>
+
+  <div class="teal-divider" style="margin-top:auto"></div>
+  <footer class="footer">Forza Gallery &nbsp;·&nbsp; Comunidad Forza Horizon</footer>
+
+  <script src="/js/api.js"></script>
+  <script src="/js/toast.js"></script>
+  <script>
+    updateNavAuth();
+
+    const username = new URLSearchParams(location.search).get("u");
+
+    if (!username) {
+      window.location.href = "/galeria.html";
+    }
+
+    async function loadPerfil() {
+      try {
+        const perfil = await apiFetch(`/usuarios/${username}`);
+        const imagenes = await apiFetch(`/imagenes?usuario=${username}&limit=60`);
+
+        document.getElementById("perfil-loading").style.display = "none";
+        document.getElementById("perfil-content").style.display = "block";
+
+        document.title = `${perfil.username} — Forza Gallery`;
+        document.getElementById("perfil-username").textContent = `@${perfil.username}`;
+        document.getElementById("perfil-bio").textContent = perfil.bio || "";
+
+        const avatar = document.getElementById("perfil-avatar");
+        if (perfil.avatar_url) avatar.src = perfil.avatar_url;
+
+        const joined = new Date(perfil.created_at).toLocaleDateString("es-ES", { month: "long", year: "numeric" });
+        document.getElementById("perfil-fecha").textContent = `Miembro desde ${joined}`;
+        document.getElementById("perfil-count").textContent = `${imagenes.length} imagen${imagenes.length !== 1 ? "es" : ""}`;
+
+        let me = null;
+        if (isLoggedIn()) {
+          try { me = await fetchMe(); } catch {}
+        }
+        if (me && me.username === username) {
+          document.getElementById("perfil-actions").style.display = "block";
+        }
+
+        const grid = document.getElementById("perfil-gallery");
+        if (!imagenes.length) {
+          grid.innerHTML = `<div class="state-box"><span class="state-icon">📷</span><p>Aún no hay fotos.</p></div>`;
+          return;
+        }
+
+        grid.innerHTML = imagenes.map((img, i) => `
+          <div class="img-card fade-in" style="animation-delay:${i*0.03}s" data-id="${img.id}">
+            <img class="img-thumb" src="${img.filename}" alt="${img.titulo}" loading="lazy" onerror="this.style.display='none'">
+            <div class="card-overlay">
+              <div class="img-meta">
+                <span class="juego-badge ${img.juego}">${img.juego}</span>
+              </div>
+              <div class="img-title">${img.titulo}</div>
+              <div class="img-bottom-row">
+                <div class="tags-row">${(img.tags||[]).map(t=>`<span class="hashtag">#${t}</span>`).join("")}</div>
+              </div>
+            </div>
+          </div>
+        `).join("");
+
+        grid.querySelectorAll(".img-card").forEach(card => {
+          card.addEventListener("click", () => {
+            window.location.href = `/galeria.html?usuario=${username}`;
+          });
+        });
+
+      } catch(e) {
+        document.getElementById("perfil-loading").style.display = "none";
+        if (e.message.includes("privado")) {
+          document.getElementById("perfil-privado").style.display = "flex";
+        } else {
+          document.getElementById("perfil-notfound").style.display = "flex";
+        }
+      }
+    }
+
+    loadPerfil();
+  </script>
+</body>
+</html>

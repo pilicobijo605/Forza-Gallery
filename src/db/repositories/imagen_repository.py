@@ -15,12 +15,16 @@ class ImagenRepository:
         juego: str | None = None,
         tag: str | None = None,
         fecha: str | None = None,
+        usuario: str | None = None,
         skip: int = 0,
         limit: int = 20,
     ) -> list[Imagen]:
         query = select(Imagen).order_by(Imagen.created_at.desc()).offset(skip).limit(limit)
         if juego:
             query = query.where(Imagen.juego == juego)
+        if usuario:
+            from src.models.usuario import Usuario as UsuarioModel
+            query = query.join(UsuarioModel).where(UsuarioModel.username == usuario)
         if tag:
             query = query.where(
                 Imagen.id.in_(

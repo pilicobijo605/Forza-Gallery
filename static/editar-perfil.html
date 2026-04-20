@@ -1,0 +1,130 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Editar perfil — Forza Gallery</title>
+  <link rel="stylesheet" href="/css/style.css" />
+</head>
+<body>
+
+  <nav class="navbar">
+    <a href="/index.html" class="navbar-brand">FORZA<span class="brand-dot"></span>GALLERY</a>
+    <ul class="navbar-links" id="nav-auth"></ul>
+  </nav>
+
+  <div class="teal-divider"></div>
+
+  <main>
+    <div class="form-container">
+      <div class="form-header">
+        <h1 class="form-title">Editar perfil</h1>
+        <p class="form-sub">Personaliza tu perfil público</p>
+      </div>
+
+      <form class="form" id="perfil-form">
+
+        <div class="form-group" style="align-items:center">
+          <label>Avatar</label>
+          <div class="avatar-edit-wrap">
+            <img id="avatar-preview" src="/img/default-avatar.svg" alt="Avatar" class="perfil-avatar" style="width:90px;height:90px" />
+            <label for="avatar-input" class="btn btn-ghost" style="margin-top:0.5rem;cursor:pointer">Cambiar foto</label>
+            <input type="file" id="avatar-input" accept="image/jpeg,image/png,image/webp" style="display:none" />
+          </div>
+        </div>
+
+        <div class="form-group">
+          <label for="bio">Biografía <small style="text-transform:none;font-size:0.8em;letter-spacing:0">(opcional)</small></label>
+          <textarea id="bio" rows="3" placeholder="Cuéntanos algo sobre ti..." maxlength="300"></textarea>
+        </div>
+
+        <div class="form-group">
+          <label>Visibilidad del perfil</label>
+          <div style="display:flex;gap:1rem;margin-top:0.25rem">
+            <label style="display:flex;align-items:center;gap:0.5rem;cursor:pointer;text-transform:none;letter-spacing:0;font-size:1rem;color:#e0e0e0">
+              <input type="radio" name="visibilidad" value="public" checked /> Público
+            </label>
+            <label style="display:flex;align-items:center;gap:0.5rem;cursor:pointer;text-transform:none;letter-spacing:0;font-size:1rem;color:#e0e0e0">
+              <input type="radio" name="visibilidad" value="private" /> Privado
+            </label>
+          </div>
+        </div>
+
+        <div class="form-actions">
+          <button type="submit" class="btn btn-primary" id="submit-btn">Guardar cambios</button>
+          <a id="back-link" href="#" class="btn btn-ghost">Cancelar</a>
+        </div>
+      </form>
+    </div>
+  </main>
+
+  <div class="teal-divider"></div>
+  <footer class="footer">Forza Gallery &nbsp;·&nbsp; Comunidad Forza Horizon</footer>
+
+  <script src="/js/api.js"></script>
+  <script src="/js/toast.js"></script>
+  <script>
+    requireAuth("/login.html");
+    updateNavAuth();
+
+    let currentUsername = "";
+
+    async function loadCurrentPerfil() {
+      const me = await fetchMe();
+      currentUsername = me.username;
+      document.getElementById("back-link").href = `/perfil.html?u=${me.username}`;
+
+      try {
+        const perfil = await apiFetch(`/usuarios/${me.username}`);
+        document.getElementById("bio").value = perfil.bio || "";
+        const radio = perfil.is_public ? "public" : "private";
+        document.querySelector(`input[name="visibilidad"][value="${radio}"]`).checked = true;
+        if (perfil.avatar_url) document.getElementById("avatar-preview").src = perfil.avatar_url;
+      } catch {}
+    }
+
+    document.getElementById("avatar-input").addEventListener("change", async (e) => {
+      const file = e.target.files[0];
+      if (!file) return;
+      document.getElementById("avatar-preview").src = URL.createObjectURL(file);
+
+      const fd = new FormData();
+      fd.append("file", file);
+      const token = localStorage.getItem("forzaToken");
+      try {
+        await fetch("/api/v1/usuarios/me/avatar", {
+          method: "PUT",
+          headers: token ? { Authorization: `Bearer ${token}` } : {},
+          body: fd,
+        }).then(r => { if (!r.ok) throw new Error(); });
+        showToast("Avatar actualizado", "success");
+      } catch {
+        showToast("Error al subir el avatar", "error");
+      }
+    });
+
+    document.getElementById("perfil-form").addEventListener("submit", async (e) => {
+      e.preventDefault();
+      const btn = document.getElementById("submit-btn");
+      btn.disabled = true;
+      btn.textContent = "Guardando...";
+      try {
+        const is_public = document.querySelector('input[name="visibilidad"]:checked').value === "public";
+        await apiFetch("/usuarios/me", {
+          method: "PUT",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({ bio: document.getElementById("bio").value.trim() || null, is_public }),
+        });
+        showToast("Perfil actualizado", "success");
+        setTimeout(() => window.location.href = `/perfil.html?u=${currentUsername}`, 1000);
+      } catch(err) {
+        showToast(err.message, "error");
+        btn.disabled = false;
+        btn.textContent = "Guardar cambios";
+      }
+    });
+
+    loadCurrentPerfil();
+  </script>
+</body>
+</html>

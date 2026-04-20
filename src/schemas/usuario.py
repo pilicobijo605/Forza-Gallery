@@ -32,6 +32,21 @@ class UsuarioOut(BaseModel):
     model_config = {"from_attributes": True}
 
 
+class PerfilOut(BaseModel):
+    username: str
+    bio: str | None
+    avatar_url: str | None
+    is_public: bool
+    created_at: datetime
+
+    model_config = {"from_attributes": True}
+
+
+class PerfilUpdate(BaseModel):
+    bio: str | None = None
+    is_public: bool = True
+
+
 class Token(BaseModel):
     access_token: str
     token_type: str = "bearer"
