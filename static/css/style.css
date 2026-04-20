@@ -100,7 +100,7 @@ img { max-width: 100%; display: block; }
   font-weight: 700;
 }
 
-.navbar-links a.nav-cta:hover { background: #33d4ff; color: #000; }
+.navbar-links a.nav-cta:hover { background: #FE784B; color: #000; }
 
 /* ── TEAL DIVIDER (forza.net signature) ── */
 .teal-divider {
@@ -254,7 +254,7 @@ img { max-width: 100%; display: block; }
   background: var(--teal);
   color: #000;
 }
-.btn-primary:hover { background: #33d4ff; transform: translateY(-1px); }
+.btn-primary:hover { background: #FE784B; color: #000; transform: translateY(-1px); }
 
 .btn-secondary {
   background: transparent;
@@ -588,7 +588,7 @@ img { max-width: 100%; display: block; }
   z-index: 10;
 }
 
-.lightbox-close:hover { background: rgba(0,200,255,0.2); }
+.lightbox-close:hover { background: rgba(254,120,75,0.2); }
 
 .lb-panel {
   display: flex;
@@ -755,6 +755,29 @@ img { max-width: 100%; display: block; }
 .form-group textarea:focus,
 .form-group select:focus { border-color: var(--teal); }
 
+.pwd-wrapper {
+  position: relative;
+  display: flex;
+  align-items: center;
+}
+.pwd-wrapper input {
+  flex: 1;
+  padding-right: 2.8rem;
+}
+.pwd-toggle {
+  position: absolute;
+  right: 0.65rem;
+  background: none;
+  border: none;
+  cursor: pointer;
+  color: var(--muted);
+  padding: 0.25rem;
+  display: flex;
+  align-items: center;
+  transition: color 0.15s;
+}
+.pwd-toggle:hover { color: var(--white); }
+
 .form-group input::placeholder,
 .form-group textarea::placeholder { color: var(--muted); }
 
@@ -773,7 +796,7 @@ img { max-width: 100%; display: block; }
 }
 
 .upload-zone:hover,
-.upload-zone.drag-over { border-color: var(--teal); background: rgba(0,200,255,0.04); }
+.upload-zone.drag-over { border-color: var(--teal); background: rgba(254,120,75,0.04); }
 
 .upload-zone input[type="file"] { display: none; }
 .upload-icon { font-size: 2.5rem; display: block; margin-bottom: 0.5rem; }
@@ -821,7 +844,7 @@ img { max-width: 100%; display: block; }
   align-items: center;
   gap: 0.3rem;
   background: var(--teal-dim);
-  border: 1px solid rgba(0,200,255,0.35);
+  border: 1px solid rgba(236,55,124,0.35);
   border-radius: 2px;
   padding: 0.2rem 0.6rem;
   font-family: var(--font-cond);
@@ -1248,7 +1271,7 @@ img { max-width: 100%; display: block; }
   flex-shrink: 0;
 }
 
-.lb-comment-submit:hover { background: #33d4ff; }
+.lb-comment-submit:hover { background: #FE784B; color: #000; }
 
 .lb-login-hint {
   font-size: 0.82rem;
