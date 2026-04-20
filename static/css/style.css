@@ -427,10 +427,18 @@ img { max-width: 100%; display: block; }
   flex-wrap: wrap;
 }
 
+.img-bottom-row {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 0.5rem;
+  flex-wrap: wrap;
+}
+
 .img-date {
   font-size: 0.72rem;
   color: rgba(255,255,255,0.5);
-  margin-left: auto;
+  flex-shrink: 0;
 }
 
 .img-delete-btn {

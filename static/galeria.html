@@ -227,10 +227,12 @@
             <div class="card-overlay">
               <div class="img-meta">
                 <span class="juego-badge ${img.juego}">${img.juego}</span>
-                <span class="img-date">${formatDate(img.created_at)}</span>
               </div>
               <div class="img-title">${img.titulo}</div>
-              <div class="tags-row">${tagsHtml(img.tags)}</div>
+              <div class="img-bottom-row">
+                <div class="tags-row">${tagsHtml(img.tags)}</div>
+                <span class="img-date">${formatDate(img.created_at)}</span>
+              </div>
             </div>
           </div>
         `).join("");
