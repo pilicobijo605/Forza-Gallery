@@ -1,4 +1,3 @@
-import re
 from datetime import datetime
 
 from pydantic import BaseModel, EmailStr, field_validator
@@ -14,11 +13,11 @@ class UsuarioCreate(BaseModel):
     def validate_password(cls, v: str) -> str:
         if len(v) < 12:
             raise ValueError("Mínimo 12 caracteres")
-        if not re.search(r"[A-Z]", v):
+        if not any(c.isupper() for c in v):
             raise ValueError("Debe contener al menos una mayúscula")
-        if not re.search(r"\d", v):
+        if not any(c.isdigit() for c in v):
             raise ValueError("Debe contener al menos un número")
-        if not re.search(r"[!@#$%^&*()\-_=+\[\]{};:'\",.<>?/\\|`~]", v):
+        if not any(not c.isalnum() for c in v):
             raise ValueError("Debe contener al menos un carácter especial")
         return v
 
