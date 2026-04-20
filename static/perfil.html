@@ -52,6 +52,26 @@
     </div>
   </main>
 
+  <div class="lightbox" id="lightbox">
+    <button class="lightbox-close" id="lb-close">✕</button>
+    <div class="lb-panel">
+      <div class="lb-title-bar" id="lb-title"></div>
+      <div class="lb-img-wrap">
+        <img id="lb-img" src="" alt="" />
+      </div>
+      <div class="lb-info-bar">
+        <div class="lb-info-left">
+          <span class="juego-badge" id="lb-juego"></span>
+          <div class="tags-row" id="lb-tags"></div>
+          <p class="lb-desc" id="lb-desc"></p>
+        </div>
+        <div class="lb-info-right">
+          <span class="lb-date" id="lb-date" style="color:var(--muted);font-size:0.78rem"></span>
+        </div>
+      </div>
+    </div>
+  </div>
+
   <div class="teal-divider" style="margin-top:auto"></div>
   <footer class="footer">Forza Gallery &nbsp;·&nbsp; Comunidad Forza Horizon</footer>
 
@@ -115,8 +135,11 @@
         `).join("");
 
         grid.querySelectorAll(".img-card").forEach(card => {
-          card.addEventListener("click", () => {
-            window.location.href = `/galeria.html?usuario=${username}`;
+          card.addEventListener("click", async () => {
+            try {
+              const img = await fetchImagen(card.dataset.id);
+              openLightbox(img);
+            } catch {}
           });
         });
 
@@ -129,6 +152,31 @@
         }
       }
     }
+
+    function openLightbox(img) {
+      document.getElementById("lb-img").src = img.filename;
+      document.getElementById("lb-img").alt = img.titulo;
+      document.getElementById("lb-title").textContent = img.titulo;
+      document.getElementById("lb-desc").textContent = img.descripcion || "";
+      const badge = document.getElementById("lb-juego");
+      badge.textContent = img.juego;
+      badge.className = `juego-badge ${img.juego}`;
+      document.getElementById("lb-tags").innerHTML = (img.tags||[]).map(t=>`<span class="hashtag">#${t}</span>`).join("");
+      const d = new Date(img.created_at);
+      document.getElementById("lb-date").textContent =
+        d.toLocaleDateString("es-ES",{day:"2-digit",month:"short",year:"numeric"}) + " · " +
+        d.toLocaleTimeString("es-ES",{hour:"2-digit",minute:"2-digit"});
+      document.getElementById("lightbox").classList.add("open");
+    }
+
+    function closeLightbox() {
+      document.getElementById("lightbox").classList.remove("open");
+    }
+
+    document.getElementById("lb-close").addEventListener("click", closeLightbox);
+    document.getElementById("lightbox").addEventListener("click", (e) => {
+      if (e.target === document.getElementById("lightbox")) closeLightbox();
+    });
 
     loadPerfil();
   </script>

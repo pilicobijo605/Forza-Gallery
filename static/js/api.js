@@ -120,10 +120,10 @@ function updateNavAuth() {
   if (isLoggedIn()) {
     fetchMe().then(me => {
       navAuth.innerHTML = `
-        <a href="/subir.html">Subir</a>
         <a href="/perfil.html?u=${me.username}" class="nav-avatar-link" title="Mi perfil">
           <img src="/img/default-avatar.svg" alt="Perfil" class="nav-avatar" id="nav-avatar-img" />
         </a>
+        <a href="/subir.html">Subir</a>
         <a href="#" id="btn-logout">Cerrar sesión</a>
       `;
       apiFetch(`/usuarios/${me.username}`).then(perfil => {
