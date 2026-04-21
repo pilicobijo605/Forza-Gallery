@@ -48,6 +48,8 @@
           <button class="filter-drop-item" data-orden="visitados">Más visitados</button>
         </div>
       </div>
+      <div class="filter-divider" id="mis-fotos-divider" style="display:none"></div>
+      <button class="filter-btn" id="mis-fotos-btn" style="display:none">👤 Mis fotos</button>
     </div>
 
     <div class="tag-filter-bar" id="tag-filter-bar" style="display:none">
@@ -159,9 +161,10 @@
     let currentJuego  = _params.get("juego") || "";
     let currentTag    = _params.get("tag") || "";
     let currentFecha  = _params.get("fecha") || "";
-    let currentPeriodo = "";
-    let currentOrden  = "recientes";
-    let currentUser   = null;
+    let currentPeriodo  = "";
+    let currentOrden    = "recientes";
+    let currentMisFotos = false;
+    let currentUser     = null;
 
     // Add year buttons dynamically
     (function() {
@@ -263,6 +266,11 @@
           return d.getFullYear() === now.getFullYear();
         return d.getFullYear() === parseInt(currentPeriodo);
       });
+    }
+
+    function applyMisFotos(imagenes) {
+      if (!currentMisFotos || !currentUser) return imagenes;
+      return imagenes.filter(img => img.usuario_id === currentUser.id);
     }
 
     function applyOrden(imagenes) {
@@ -539,6 +547,7 @@
         if (currentFecha) params.set("fecha", currentFecha);
         let imagenes = await apiFetch(`/imagenes?${params}`);
         imagenes = applyPeriodoFilter(imagenes);
+        imagenes = applyMisFotos(imagenes);
         imagenes = applyOrden(imagenes);
 
         const grid = document.getElementById("gallery");
@@ -748,8 +757,18 @@
       }
     });
 
+    document.getElementById("mis-fotos-btn").addEventListener("click", () => {
+      currentMisFotos = !currentMisFotos;
+      document.getElementById("mis-fotos-btn").classList.toggle("active", currentMisFotos);
+      loadGallery();
+    });
+
     const _openId = _params.get("id");
     loadUser().then(async () => {
+      if (currentUser) {
+        document.getElementById("mis-fotos-btn").style.display = "";
+        document.getElementById("mis-fotos-divider").style.display = "";
+      }
       await loadGallery();
       if (_openId) {
         try { const img = await fetchImagen(_openId); openLightbox(img); } catch {}
