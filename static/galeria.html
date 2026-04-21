@@ -5,7 +5,7 @@
   <link rel="icon" href="/favicon.svg" type="image/svg+xml" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
   <title>Galería — Forza Gallery</title>
-  <link rel="stylesheet" href="/css/style.css?v=11" />
+  <link rel="stylesheet" href="/css/style.css?v=12" />
 </head>
 <body>
 
@@ -91,7 +91,19 @@
     <div class="lb-panel">
       <div class="lb-header">
         <div class="lb-title-bar" id="lb-title"></div>
-        <button class="lb-date" id="lb-date"></button>
+        <div style="display:flex;align-items:center;gap:0.5rem;flex-shrink:0">
+          <button class="lb-date" id="lb-date"></button>
+          <div class="lb-map-wrap" id="lb-map-wrap">
+            <button class="lb-action-btn" id="lb-map-btn" title="Ver ubicación en mapa" style="display:none;padding:0.2rem 0.5rem;font-size:0.85rem">📍</button>
+            <div class="lb-map-widget" id="lb-map-widget">
+              <div class="lb-map-widget-inner">
+                <img id="lb-map-img" src="" alt="Mapa" />
+                <div class="lb-map-dot" id="lb-map-dot"></div>
+              </div>
+              <div class="lb-map-footer" id="lb-map-footer"></div>
+            </div>
+          </div>
+        </div>
       </div>
       <div class="lb-img-wrap">
         <img id="lb-img" src="" alt="" />
@@ -115,16 +127,6 @@
               <span class="lb-action-icon">💬</span><span id="lb-comment-count">0</span>
             </button>
             <button class="lb-action-btn" id="lb-edit-toggle" style="display:none" title="Editar">✏️</button>
-            <div class="lb-map-wrap" id="lb-map-wrap">
-              <button class="lb-action-btn" id="lb-map-btn" title="Ver ubicación en mapa" style="display:none">📍</button>
-              <div class="lb-map-widget" id="lb-map-widget">
-                <div class="lb-map-widget-inner">
-                  <img id="lb-map-img" src="" alt="Mapa" />
-                  <div class="lb-map-dot" id="lb-map-dot"></div>
-                </div>
-                <div class="lb-map-footer" id="lb-map-footer"></div>
-              </div>
-            </div>
             <span class="lb-action-stat" title="Visitas">
               <span class="lb-action-icon">👁</span><span id="lb-views-count">0</span>
             </span>

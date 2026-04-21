@@ -2600,7 +2600,7 @@ img { max-width: 100%; display: block; }
 .map-selector-clear:hover { color:#ff5555; }
 .map-selector-clear.visible { display:block; }
 .map-selector { position:relative; cursor:crosshair; user-select:none; }
-.map-selector img { width:100%; display:block; pointer-events:none; max-height:260px; object-fit:cover; }
+.map-selector img { width:100%; display:block; pointer-events:none; max-height:420px; object-fit:contain; background:var(--surface2); }
 .map-pin {
   position:absolute; width:18px; height:18px;
   background:var(--teal); border:2px solid #fff; border-radius:50% 50% 50% 0;
@@ -2617,16 +2617,16 @@ img { max-width: 100%; display: block; }
 /* ── LB MAP WIDGET ── */
 .lb-map-wrap { position:relative; }
 .lb-map-widget {
-  position:absolute; bottom:calc(100% + 8px); right:0;
-  width:255px; background:#111;
+  position:absolute; top:calc(100% + 8px); right:0;
+  width:min(85vw, 420px); background:#111;
   border:1px solid rgba(255,255,255,0.12); border-radius:10px;
   overflow:hidden; box-shadow:0 8px 32px rgba(0,0,0,0.8);
-  z-index:50; display:none;
+  z-index:500; display:none;
   animation:shareMenuIn 0.12s ease;
 }
 .lb-map-widget.open { display:block; }
 .lb-map-widget-inner { position:relative; }
-.lb-map-widget-inner img { width:100%; display:block; max-height:190px; object-fit:cover; }
+.lb-map-widget-inner img { width:100%; display:block; object-fit:contain; background:var(--surface2); }
 .lb-map-dot {
   position:absolute; width:13px; height:13px;
   background:var(--teal); border:2px solid #fff; border-radius:50%;
