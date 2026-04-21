@@ -266,13 +266,17 @@ function updateNavAuth() {
             <div id="nav-bell-list"><div class="notif-empty">Cargando...</div></div>
           </div>
         </li>
-        <li>
-          <a href="/perfil.html?u=${me.username}" class="nav-avatar-link" title="Mi perfil">
+        <li class="nav-user-wrap">
+          <button class="nav-user-btn" id="nav-user-btn" title="Mi cuenta">
             <img src="/img/default-avatar.svg" alt="Perfil" class="nav-avatar" id="nav-avatar-img" />
-          </a>
+          </button>
+          <div class="nav-user-dropdown" id="nav-user-dropdown">
+            <a href="/perfil.html?u=${me.username}" class="nav-drop-item">Mi perfil</a>
+            <a href="/subir.html" class="nav-drop-item">Subir foto</a>
+            <div class="nav-drop-divider"></div>
+            <button class="nav-drop-item nav-drop-danger" id="btn-logout">Cerrar sesión</button>
+          </div>
         </li>
-        <li><a href="/subir.html">Subir</a></li>
-        <li><a href="#" id="btn-logout">Cerrar sesión</a></li>
       `;
       apiFetch(`/usuarios/${me.username}`).then(perfil => {
         if (perfil.avatar_url) document.getElementById("nav-avatar-img").src = perfil.avatar_url;
@@ -284,14 +288,13 @@ function updateNavAuth() {
       _initNavBell();
       _initNavMsgBadge();
       _initChatWidget();
+      _initNavUserMenu();
     }).catch(() => {
+      clearToken();
       navAuth.innerHTML = `
-        <li><a href="/subir.html">Subir</a></li>
-        <li><a href="#" id="btn-logout">Cerrar sesión</a></li>
+        <li><a href="/login.html">Login</a></li>
+        <li><a href="/registro.html" class="nav-cta">Registro</a></li>
       `;
-      document.getElementById("btn-logout")?.addEventListener("click", (e) => {
-        e.preventDefault(); clearToken(); window.location.href = "/index.html";
-      });
     });
     return;
   } else {
@@ -371,6 +374,29 @@ function _initNavBell() {
     if (!dropdown.contains(e.target) && e.target !== bellBtn) {
       dropdown.classList.remove("open");
     }
+  });
+}
+
+function _initNavUserMenu() {
+  const btn = document.getElementById("nav-user-btn");
+  const dropdown = document.getElementById("nav-user-dropdown");
+  if (!btn || !dropdown) return;
+
+  btn.addEventListener("click", (e) => {
+    e.stopPropagation();
+    dropdown.classList.toggle("open");
+  });
+
+  document.addEventListener("click", (e) => {
+    if (!dropdown.contains(e.target) && e.target !== btn) {
+      dropdown.classList.remove("open");
+    }
+  });
+
+  document.getElementById("btn-logout")?.addEventListener("click", (e) => {
+    e.preventDefault();
+    clearToken();
+    window.location.href = "/index.html";
   });
 }
 
