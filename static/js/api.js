@@ -419,8 +419,14 @@ function _initHamburger(me) {
   drawer.id = "nav-drawer";
   drawer.className = "nav-drawer";
 
+  const closeBtn = document.createElement("button");
+  closeBtn.className = "nav-drawer-close-btn";
+  closeBtn.setAttribute("aria-label", "Cerrar menú");
+  closeBtn.innerHTML = `<svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round"><line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/></svg>`;
+  drawer.appendChild(closeBtn);
+
   if (me) {
-    drawer.innerHTML = `
+    drawer.innerHTML += `
       <ul class="nav-drawer-links">
         <li><a href="/galeria.html">Galería</a></li>
         <li><a href="/mensajes.html">Mensajes</a></li>
@@ -433,7 +439,7 @@ function _initHamburger(me) {
       clearToken(); window.location.href = "/index.html";
     });
   } else {
-    drawer.innerHTML = `
+    drawer.innerHTML += `
       <ul class="nav-drawer-links">
         <li><a href="/galeria.html">Galería</a></li>
         <li><a href="/login.html">Login</a></li>
@@ -458,6 +464,7 @@ function _initHamburger(me) {
 
   hamBtn.addEventListener("click", openDrawer);
   overlay.addEventListener("click", closeDrawer);
+  drawer.querySelector(".nav-drawer-close-btn").addEventListener("click", closeDrawer);
   drawer.querySelectorAll("a").forEach(a => a.addEventListener("click", closeDrawer));
 }
 

@@ -1086,6 +1086,19 @@ img { max-width: 100%; display: block; }
 }
 .nav-drawer.open { right: 0; }
 
+.nav-drawer-close-btn {
+  align-self: flex-end;
+  background: none;
+  border: none;
+  color: var(--muted);
+  cursor: pointer;
+  padding: 0.5rem 1rem 0.75rem;
+  display: flex;
+  align-items: center;
+  transition: color 0.15s;
+}
+.nav-drawer-close-btn:hover { color: var(--white); }
+
 .nav-drawer-links {
   display: flex;
   flex-direction: column;
