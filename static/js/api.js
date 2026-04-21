@@ -241,11 +241,14 @@ async function getMensajesNoLeidos() {
   return apiFetch("/mensajes/no-leidos");
 }
 
+let _currentUsername = null;
+
 function updateNavAuth() {
   const navAuth = document.getElementById("nav-auth");
   if (!navAuth) return;
   if (isLoggedIn()) {
     fetchMe().then(me => {
+      _currentUsername = me.username;
       navAuth.innerHTML = `
         <li class="nav-msg-wrap">
           <a href="/mensajes.html" class="nav-msg-btn" title="Mensajes">
@@ -280,6 +283,7 @@ function updateNavAuth() {
 
       _initNavBell();
       _initNavMsgBadge();
+      _initChatWidget();
     }).catch(() => {
       navAuth.innerHTML = `
         <li><a href="/subir.html">Subir</a></li>
@@ -361,4 +365,119 @@ function _initNavBell() {
       dropdown.classList.remove("open");
     }
   });
+}
+
+function _initChatWidget() {
+  if (document.getElementById("chat-widget")) return;
+
+  const el = document.createElement("div");
+  el.id = "chat-widget";
+  el.className = "chat-widget";
+  el.innerHTML = `
+    <div class="chat-widget-header">
+      <img class="cw-avatar" id="cw-avatar" src="/img/default-avatar.svg" alt="" />
+      <a class="cw-username" id="cw-username" href="#"></a>
+      <div class="cw-header-actions">
+        <a id="cw-fullpage" class="cw-icon-btn" href="/mensajes.html" title="Ver en pantalla completa">
+          <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M15 3h6v6M9 21H3v-6M21 3l-7 7M3 21l7-7"/></svg>
+        </a>
+        <button class="cw-icon-btn" id="cw-close" title="Cerrar">
+          <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/></svg>
+        </button>
+      </div>
+    </div>
+    <div class="chat-widget-messages" id="cw-messages"><div class="cw-empty">Cargando...</div></div>
+    <div class="chat-widget-input">
+      <textarea id="cw-input" placeholder="Escribe un mensaje..." rows="1"></textarea>
+      <button class="cw-send-btn" id="cw-send">
+        <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><line x1="22" y1="2" x2="11" y2="13"/><polygon points="22 2 15 22 11 13 2 9 22 2"/></svg>
+      </button>
+    </div>
+  `;
+  document.body.appendChild(el);
+
+  let _cwUser = null;
+  let _cwPollInterval = null;
+
+  function escHtml(s) {
+    return String(s).replace(/&/g,"&amp;").replace(/</g,"&lt;").replace(/>/g,"&gt;").replace(/\n/g,"<br>");
+  }
+
+  function renderMessages(msgs) {
+    const box = document.getElementById("cw-messages");
+    if (!msgs || !msgs.length) {
+      box.innerHTML = '<div class="cw-empty">Empieza la conversación</div>';
+      return;
+    }
+    const atBottom = box.scrollHeight - box.scrollTop - box.clientHeight < 60;
+    box.innerHTML = msgs.map(m => {
+      const mine = m.autor_username === _currentUsername;
+      return `<div class="cw-bubble-wrap ${mine ? "mine" : "theirs"}"><div class="cw-bubble">${escHtml(m.contenido)}</div></div>`;
+    }).join("");
+    if (atBottom) box.scrollTop = box.scrollHeight;
+  }
+
+  async function loadMessages() {
+    if (!_cwUser) return;
+    try {
+      const msgs = await getMensajes(_cwUser);
+      renderMessages(msgs);
+    } catch {}
+  }
+
+  async function sendMsg() {
+    const input = document.getElementById("cw-input");
+    const text = input.value.trim();
+    if (!text || !_cwUser) return;
+    input.value = "";
+    input.style.height = "auto";
+    try {
+      await enviarMensaje(_cwUser, text);
+      await loadMessages();
+      const box = document.getElementById("cw-messages");
+      box.scrollTop = box.scrollHeight;
+    } catch {}
+  }
+
+  document.getElementById("cw-close").addEventListener("click", () => {
+    el.classList.remove("open");
+    clearInterval(_cwPollInterval);
+    _cwPollInterval = null;
+    _cwUser = null;
+  });
+
+  const input = document.getElementById("cw-input");
+  input.addEventListener("keydown", e => {
+    if (e.key === "Enter" && !e.shiftKey) { e.preventDefault(); sendMsg(); }
+  });
+  input.addEventListener("input", () => {
+    input.style.height = "auto";
+    input.style.height = Math.min(input.scrollHeight, 80) + "px";
+  });
+  document.getElementById("cw-send").addEventListener("click", sendMsg);
+
+  window.openChatWidget = async function(username) {
+    clearInterval(_cwPollInterval);
+    _cwUser = username;
+
+    document.getElementById("cw-username").textContent = username;
+    document.getElementById("cw-username").href = `/perfil.html?u=${username}`;
+    document.getElementById("cw-fullpage").href = `/mensajes.html?u=${username}`;
+    document.getElementById("cw-avatar").src = "/img/default-avatar.svg";
+    document.getElementById("cw-messages").innerHTML = '<div class="cw-empty">Cargando...</div>';
+    document.getElementById("cw-input").value = "";
+    document.getElementById("cw-input").style.height = "auto";
+
+    el.classList.add("open");
+
+    apiFetch(`/usuarios/${username}`).then(p => {
+      if (p.avatar_url) document.getElementById("cw-avatar").src = p.avatar_url;
+    }).catch(() => {});
+
+    await loadMessages();
+    const box = document.getElementById("cw-messages");
+    box.scrollTop = box.scrollHeight;
+
+    _cwPollInterval = setInterval(loadMessages, 4000);
+  };
 }
