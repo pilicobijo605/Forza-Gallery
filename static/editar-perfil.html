@@ -5,6 +5,84 @@
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
   <title>Editar perfil — Forza Gallery</title>
   <link rel="stylesheet" href="/css/style.css?v=5" />
+  <style>
+    .crop-overlay {
+      display: none;
+      position: fixed;
+      inset: 0;
+      z-index: 600;
+      background: rgba(0,0,0,0.88);
+      align-items: center;
+      justify-content: center;
+    }
+    .crop-overlay.open { display: flex; }
+    .crop-box {
+      background: var(--surface);
+      border: 1px solid var(--border);
+      border-radius: var(--radius);
+      padding: 1.5rem;
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      gap: 1rem;
+      width: min(340px, 94vw);
+    }
+    .crop-hint {
+      font-size: 0.78rem;
+      color: var(--muted);
+      text-align: center;
+      line-height: 1.5;
+    }
+    #crop-canvas {
+      display: block;
+      width: 270px;
+      height: 270px;
+      cursor: grab;
+      touch-action: none;
+      border-radius: 4px;
+    }
+    #crop-canvas:active { cursor: grabbing; }
+    .crop-zoom-row {
+      display: flex;
+      align-items: center;
+      gap: 0.75rem;
+    }
+    .crop-zoom-btn {
+      background: var(--surface2);
+      border: 1px solid rgba(255,255,255,0.12);
+      color: var(--white);
+      border-radius: var(--radius);
+      width: 36px; height: 36px;
+      font-size: 1.2rem;
+      cursor: pointer;
+      display: flex; align-items: center; justify-content: center;
+      transition: background 0.15s;
+    }
+    .crop-zoom-btn:hover { background: rgba(255,255,255,0.1); }
+    #crop-zoom-range {
+      -webkit-appearance: none;
+      appearance: none;
+      width: 140px;
+      height: 4px;
+      background: var(--surface2);
+      border-radius: 2px;
+      outline: none;
+      cursor: pointer;
+    }
+    #crop-zoom-range::-webkit-slider-thumb {
+      -webkit-appearance: none;
+      width: 16px; height: 16px;
+      border-radius: 50%;
+      background: var(--teal);
+      cursor: pointer;
+    }
+    .crop-actions {
+      display: flex;
+      gap: 0.75rem;
+      justify-content: flex-end;
+      width: 100%;
+    }
+  </style>
 </head>
 <body>
 
@@ -58,6 +136,23 @@
     </div>
   </main>
 
+  <!-- Crop modal -->
+  <div class="crop-overlay" id="crop-overlay">
+    <div class="crop-box">
+      <p class="crop-hint">Arrastra para encuadrar &nbsp;·&nbsp; Scroll o desliza para zoom</p>
+      <canvas id="crop-canvas" width="270" height="270"></canvas>
+      <div class="crop-zoom-row">
+        <button type="button" class="crop-zoom-btn" id="crop-zoom-out">−</button>
+        <input type="range" id="crop-zoom-range" min="0" max="100" value="0" />
+        <button type="button" class="crop-zoom-btn" id="crop-zoom-in">+</button>
+      </div>
+      <div class="crop-actions">
+        <button type="button" class="btn btn-ghost" id="crop-cancel">Cancelar</button>
+        <button type="button" class="btn btn-primary" id="crop-apply">Aplicar</button>
+      </div>
+    </div>
+  </div>
+
   <div class="teal-divider"></div>
   <footer class="footer">Forza Gallery &nbsp;·&nbsp; Comunidad Forza Horizon</footer>
 
@@ -73,7 +168,6 @@
       const me = await fetchMe();
       currentUsername = me.username;
       document.getElementById("back-link").href = `/perfil.html?u=${me.username}`;
-
       try {
         const perfil = await apiFetch(`/usuarios/${me.username}`);
         document.getElementById("bio").value = perfil.bio || "";
@@ -83,26 +177,189 @@
       } catch {}
     }
 
-    document.getElementById("avatar-input").addEventListener("change", async (e) => {
-      const file = e.target.files[0];
-      if (!file) return;
-      document.getElementById("avatar-preview").src = URL.createObjectURL(file);
+    /* ── CROPPER ── */
+    const DISPLAY = 270;
+    const OUTPUT  = 400;
+    const RADIUS  = DISPLAY / 2 - 6;
 
-      const fd = new FormData();
-      fd.append("file", file);
-      const token = localStorage.getItem("forzaToken");
+    let cropImg = null, cropZoom = 1, cropMinZoom = 1, cropOx = 0, cropOy = 0;
+    let dragState = null, touchState = null;
+
+    function clampOffset() {
+      const hw = cropImg.width  * cropZoom / 2;
+      const hh = cropImg.height * cropZoom / 2;
+      const mx = Math.max(0, hw - RADIUS);
+      const my = Math.max(0, hh - RADIUS);
+      cropOx = Math.max(-mx, Math.min(mx, cropOx));
+      cropOy = Math.max(-my, Math.min(my, cropOy));
+    }
+
+    function draw() {
+      const canvas = document.getElementById("crop-canvas");
+      const ctx = canvas.getContext("2d");
+      ctx.clearRect(0, 0, DISPLAY, DISPLAY);
+
+      const sw = cropImg.width  * cropZoom;
+      const sh = cropImg.height * cropZoom;
+      const sx = DISPLAY / 2 - sw / 2 + cropOx;
+      const sy = DISPLAY / 2 - sh / 2 + cropOy;
+      ctx.drawImage(cropImg, sx, sy, sw, sh);
+
+      ctx.save();
+      ctx.fillStyle = "rgba(0,0,0,0.6)";
+      ctx.beginPath();
+      ctx.rect(0, 0, DISPLAY, DISPLAY);
+      ctx.arc(DISPLAY / 2, DISPLAY / 2, RADIUS, 0, Math.PI * 2, true);
+      ctx.fill("evenodd");
+
+      ctx.beginPath();
+      ctx.arc(DISPLAY / 2, DISPLAY / 2, RADIUS, 0, Math.PI * 2);
+      ctx.strokeStyle = "rgba(255,255,255,0.55)";
+      ctx.lineWidth = 2;
+      ctx.stroke();
+      ctx.restore();
+    }
+
+    function setZoomFromRange(val) {
+      const t = val / 100;
+      cropZoom = cropMinZoom * Math.pow(4, t);
+      clampOffset();
+      draw();
+    }
+
+    function syncRange() {
+      const t = Math.log(cropZoom / cropMinZoom) / Math.log(4);
+      document.getElementById("crop-zoom-range").value = Math.round(t * 100);
+    }
+
+    function openCropper(file) {
+      const url = URL.createObjectURL(file);
+      const img = new Image();
+      img.onload = () => {
+        cropImg = img;
+        const minDim = Math.min(img.width, img.height);
+        cropMinZoom = (RADIUS * 2) / minDim;
+        cropZoom = cropMinZoom;
+        cropOx = 0; cropOy = 0;
+        document.getElementById("crop-zoom-range").value = 0;
+        draw();
+        document.getElementById("crop-overlay").classList.add("open");
+      };
+      img.src = url;
+    }
+
+    function getCroppedBlob() {
+      return new Promise(resolve => {
+        const out = document.createElement("canvas");
+        out.width = OUTPUT; out.height = OUTPUT;
+        const ctx = out.getContext("2d");
+        const scale = OUTPUT / DISPLAY;
+        const sw = cropImg.width  * cropZoom * scale;
+        const sh = cropImg.height * cropZoom * scale;
+        const sx = OUTPUT / 2 - sw / 2 + cropOx * scale;
+        const sy = OUTPUT / 2 - sh / 2 + cropOy * scale;
+        ctx.beginPath();
+        ctx.arc(OUTPUT / 2, OUTPUT / 2, OUTPUT / 2, 0, Math.PI * 2);
+        ctx.clip();
+        ctx.drawImage(cropImg, sx, sy, sw, sh);
+        out.toBlob(resolve, "image/jpeg", 0.92);
+      });
+    }
+
+    const canvas = document.getElementById("crop-canvas");
+
+    canvas.addEventListener("mousedown", e => {
+      dragState = { x: e.clientX, y: e.clientY, ox: cropOx, oy: cropOy };
+    });
+    window.addEventListener("mousemove", e => {
+      if (!dragState) return;
+      cropOx = dragState.ox + (e.clientX - dragState.x);
+      cropOy = dragState.oy + (e.clientY - dragState.y);
+      clampOffset(); draw();
+    });
+    window.addEventListener("mouseup", () => { dragState = null; });
+
+    canvas.addEventListener("wheel", e => {
+      e.preventDefault();
+      cropZoom = Math.max(cropMinZoom, cropZoom * (e.deltaY < 0 ? 1.1 : 0.91));
+      clampOffset(); syncRange(); draw();
+    }, { passive: false });
+
+    canvas.addEventListener("touchstart", e => {
+      if (e.touches.length === 1) {
+        touchState = { type: "drag", x: e.touches[0].clientX, y: e.touches[0].clientY, ox: cropOx, oy: cropOy };
+      } else if (e.touches.length === 2) {
+        const d = Math.hypot(e.touches[0].clientX - e.touches[1].clientX, e.touches[0].clientY - e.touches[1].clientY);
+        touchState = { type: "pinch", dist: d, zoom: cropZoom };
+      }
+    }, { passive: true });
+
+    canvas.addEventListener("touchmove", e => {
+      e.preventDefault();
+      if (!touchState) return;
+      if (touchState.type === "drag" && e.touches.length === 1) {
+        cropOx = touchState.ox + (e.touches[0].clientX - touchState.x);
+        cropOy = touchState.oy + (e.touches[0].clientY - touchState.y);
+        clampOffset(); draw();
+      } else if (touchState.type === "pinch" && e.touches.length === 2) {
+        const d = Math.hypot(e.touches[0].clientX - e.touches[1].clientX, e.touches[0].clientY - e.touches[1].clientY);
+        cropZoom = Math.max(cropMinZoom, touchState.zoom * d / touchState.dist);
+        clampOffset(); syncRange(); draw();
+      }
+    }, { passive: false });
+
+    canvas.addEventListener("touchend", () => { touchState = null; });
+
+    document.getElementById("crop-zoom-range").addEventListener("input", e => {
+      setZoomFromRange(+e.target.value);
+    });
+    document.getElementById("crop-zoom-in").addEventListener("click", () => {
+      cropZoom = Math.min(cropMinZoom * 4, cropZoom * 1.15);
+      clampOffset(); syncRange(); draw();
+    });
+    document.getElementById("crop-zoom-out").addEventListener("click", () => {
+      cropZoom = Math.max(cropMinZoom, cropZoom / 1.15);
+      clampOffset(); syncRange(); draw();
+    });
+
+    document.getElementById("crop-cancel").addEventListener("click", () => {
+      document.getElementById("crop-overlay").classList.remove("open");
+      document.getElementById("avatar-input").value = "";
+    });
+
+    document.getElementById("crop-apply").addEventListener("click", async () => {
+      const btn = document.getElementById("crop-apply");
+      btn.disabled = true;
+      btn.textContent = "Subiendo...";
       try {
-        await fetch("/api/v1/usuarios/me/avatar", {
+        const blob = await getCroppedBlob();
+        const fd = new FormData();
+        fd.append("file", blob, "avatar.jpg");
+        const token = localStorage.getItem("forzaToken");
+        const res = await fetch("/api/v1/usuarios/me/avatar", {
           method: "PUT",
           headers: token ? { Authorization: `Bearer ${token}` } : {},
           body: fd,
-        }).then(r => { if (!r.ok) throw new Error(); });
+        });
+        if (!res.ok) throw new Error();
+        const perfil = await res.json();
+        document.getElementById("avatar-preview").src = perfil.avatar_url + "?t=" + Date.now();
+        document.getElementById("crop-overlay").classList.remove("open");
         showToast("Avatar actualizado", "success");
       } catch {
         showToast("Error al subir el avatar", "error");
+      } finally {
+        btn.disabled = false;
+        btn.textContent = "Aplicar";
       }
     });
 
+    document.getElementById("avatar-input").addEventListener("change", e => {
+      const file = e.target.files[0];
+      if (file) openCropper(file);
+    });
+
+    /* ── PERFIL FORM ── */
     document.getElementById("perfil-form").addEventListener("submit", async (e) => {
       e.preventDefault();
       const btn = document.getElementById("submit-btn");
