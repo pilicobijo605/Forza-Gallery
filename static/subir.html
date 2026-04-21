@@ -5,7 +5,7 @@
   <link rel="icon" href="/favicon.svg" type="image/svg+xml" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
   <title>Subir foto — Forza Gallery</title>
-  <link rel="stylesheet" href="/css/style.css?v=12" />
+  <link rel="stylesheet" href="/css/style.css?v=13" />
 </head>
 <body>
 
@@ -68,8 +68,15 @@
               <button type="button" class="map-selector-clear" id="map-clear">✕ Quitar</button>
             </div>
             <div class="map-selector" id="map-selector">
-              <img id="map-img" src="" alt="Mapa del juego" draggable="false" />
-              <div class="map-pin" id="map-pin"></div>
+              <div class="map-zoom-controls">
+                <button type="button" class="map-zoom-btn" id="map-zoom-in">+</button>
+                <button type="button" class="map-zoom-btn" id="map-zoom-out">−</button>
+                <button type="button" class="map-zoom-btn" id="map-zoom-reset" style="font-size:0.72rem">⊙</button>
+              </div>
+              <div class="map-zoom-inner" id="map-zoom-inner">
+                <img id="map-img" src="" alt="Mapa del juego" draggable="false" />
+                <div class="map-pin" id="map-pin"></div>
+              </div>
             </div>
           </div>
           <input type="hidden" id="map-x" />
@@ -193,8 +200,117 @@
       tagsHidden.value = [...activeTags].map(t => `#${t}`).join(" ");
     }
 
-    /* ── Map selector ── */
+    /* ── Map selector con zoom/pan ── */
     const MAP_EXTS = { FH1:"jpg", FH2:"png", FH3:"jpg", FH4:"jpg", FH5:"jpg" };
+    const mapContainer = document.getElementById("map-selector");
+    const mapInner     = document.getElementById("map-zoom-inner");
+    let mScale = 1, mTx = 0, mTy = 0;
+    let mDragging = false, mDidDrag = false, mStartX = 0, mStartY = 0, mLastX = 0, mLastY = 0;
+
+    function mApply() {
+      mapInner.style.transform = `translate(${mTx}px,${mTy}px) scale(${mScale})`;
+    }
+    function mClamp() {
+      const cw = mapContainer.offsetWidth, ch = mapContainer.offsetHeight;
+      const imgEl = document.getElementById("map-img");
+      const iw = imgEl.offsetWidth * mScale, ih = imgEl.offsetHeight * mScale;
+      const mx = Math.max(0,(iw-cw)/2), my = Math.max(0,(ih-ch)/2);
+      mTx = Math.max(-mx, Math.min(mx, mTx));
+      mTy = Math.max(-my, Math.min(my, mTy));
+      if (iw <= cw) mTx = 0;
+      if (ih <= ch) mTy = 0;
+    }
+    function mZoom(factor, ox, oy) {
+      const prev = mScale;
+      mScale = Math.max(1, Math.min(8, mScale * factor));
+      const r = mScale / prev;
+      mTx = ox + (mTx - ox) * r;
+      mTy = oy + (mTy - oy) * r;
+      mClamp(); mApply();
+    }
+    function mPlacePin(clientX, clientY) {
+      const rect = mapContainer.getBoundingClientRect();
+      const cx = clientX - rect.left - mapContainer.offsetWidth / 2;
+      const cy = clientY - rect.top  - mapContainer.offsetHeight / 2;
+      const imgEl = document.getElementById("map-img");
+      const nx = Math.max(0, Math.min(1, (cx - mTx) / (imgEl.offsetWidth  * mScale) + 0.5));
+      const ny = Math.max(0, Math.min(1, (cy - mTy) / (imgEl.offsetHeight * mScale) + 0.5));
+      const pin = document.getElementById("map-pin");
+      pin.style.left = `${nx * 100}%`;
+      pin.style.top  = `${ny * 100}%`;
+      pin.classList.add("visible");
+      document.getElementById("map-x").value = nx.toFixed(4);
+      document.getElementById("map-y").value = ny.toFixed(4);
+      document.getElementById("map-clear").classList.add("visible");
+    }
+
+    mapContainer.addEventListener("wheel", (e) => {
+      e.preventDefault();
+      const rect = mapContainer.getBoundingClientRect();
+      const ox = e.clientX - rect.left - mapContainer.offsetWidth / 2;
+      const oy = e.clientY - rect.top  - mapContainer.offsetHeight / 2;
+      mZoom(e.deltaY < 0 ? 1.2 : 0.833, ox, oy);
+    }, { passive: false });
+
+    mapContainer.addEventListener("mousedown", (e) => {
+      mDragging = true; mDidDrag = false;
+      mStartX = mLastX = e.clientX; mStartY = mLastY = e.clientY;
+      mapContainer.style.cursor = "grabbing";
+    });
+    document.addEventListener("mousemove", (e) => {
+      if (!mDragging) return;
+      if (Math.abs(e.clientX-mStartX)>4 || Math.abs(e.clientY-mStartY)>4) mDidDrag = true;
+      mTx += e.clientX - mLastX; mTy += e.clientY - mLastY;
+      mLastX = e.clientX; mLastY = e.clientY;
+      mClamp(); mApply();
+    });
+    document.addEventListener("mouseup", (e) => {
+      if (!mDragging) return;
+      mDragging = false;
+      mapContainer.style.cursor = "grab";
+      if (!mDidDrag) mPlacePin(e.clientX, e.clientY);
+    });
+
+    let mTouches = [], mLastPinch = 0;
+    mapContainer.addEventListener("touchstart", (e) => {
+      mTouches = [...e.touches];
+      if (mTouches.length === 1) { mLastX = mTouches[0].clientX; mLastY = mTouches[0].clientY; mStartX = mLastX; mStartY = mLastY; mDidDrag = false; }
+      else if (mTouches.length === 2) mLastPinch = Math.hypot(mTouches[1].clientX-mTouches[0].clientX, mTouches[1].clientY-mTouches[0].clientY);
+      e.preventDefault();
+    }, { passive: false });
+    mapContainer.addEventListener("touchmove", (e) => {
+      if (e.touches.length === 1) {
+        const dx = e.touches[0].clientX-mLastX, dy = e.touches[0].clientY-mLastY;
+        if (Math.abs(e.touches[0].clientX-mStartX)>4||Math.abs(e.touches[0].clientY-mStartY)>4) mDidDrag=true;
+        mTx+=dx; mTy+=dy; mLastX=e.touches[0].clientX; mLastY=e.touches[0].clientY;
+        mClamp(); mApply();
+      } else if (e.touches.length === 2) {
+        const dist = Math.hypot(e.touches[1].clientX-e.touches[0].clientX, e.touches[1].clientY-e.touches[0].clientY);
+        const rect = mapContainer.getBoundingClientRect();
+        const ox = (e.touches[0].clientX+e.touches[1].clientX)/2 - rect.left - mapContainer.offsetWidth/2;
+        const oy = (e.touches[0].clientY+e.touches[1].clientY)/2 - rect.top  - mapContainer.offsetHeight/2;
+        mZoom(dist/mLastPinch, ox, oy); mLastPinch = dist; mDidDrag = true;
+      }
+      e.preventDefault();
+    }, { passive: false });
+    mapContainer.addEventListener("touchend", (e) => {
+      if (e.changedTouches.length===1 && e.touches.length===0 && !mDidDrag)
+        mPlacePin(e.changedTouches[0].clientX, e.changedTouches[0].clientY);
+      mTouches = [...e.touches];
+    });
+
+    document.getElementById("map-zoom-in").addEventListener("click",    () => mZoom(1.3, 0, 0));
+    document.getElementById("map-zoom-out").addEventListener("click",   () => mZoom(0.77, 0, 0));
+    document.getElementById("map-zoom-reset").addEventListener("click", () => { mScale=1; mTx=0; mTy=0; mApply(); });
+
+    function clearMapPin() {
+      document.getElementById("map-pin").classList.remove("visible");
+      document.getElementById("map-x").value = "";
+      document.getElementById("map-y").value = "";
+      document.getElementById("map-clear").classList.remove("visible");
+      mScale=1; mTx=0; mTy=0; mApply();
+    }
+    document.getElementById("map-clear").addEventListener("click", clearMapPin);
 
     document.getElementById("juego").addEventListener("change", function() {
       const juego = this.value;
@@ -206,28 +322,6 @@
       } else {
         mapGroup.style.display = "none";
       }
-    });
-
-    function clearMapPin() {
-      document.getElementById("map-pin").classList.remove("visible");
-      document.getElementById("map-x").value = "";
-      document.getElementById("map-y").value = "";
-      document.getElementById("map-clear").classList.remove("visible");
-    }
-
-    document.getElementById("map-clear").addEventListener("click", clearMapPin);
-
-    document.getElementById("map-selector").addEventListener("click", function(e) {
-      const rect = this.getBoundingClientRect();
-      const x = (e.clientX - rect.left) / rect.width;
-      const y = (e.clientY - rect.top) / rect.height;
-      const pin = document.getElementById("map-pin");
-      pin.style.left = `${x * 100}%`;
-      pin.style.top  = `${y * 100}%`;
-      pin.classList.add("visible");
-      document.getElementById("map-x").value = x.toFixed(4);
-      document.getElementById("map-y").value = y.toFixed(4);
-      document.getElementById("map-clear").classList.add("visible");
     });
 
     /* ── Submit ── */

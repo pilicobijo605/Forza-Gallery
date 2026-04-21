@@ -5,7 +5,7 @@
   <link rel="icon" href="/favicon.svg" type="image/svg+xml" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
   <title>Galería — Forza Gallery</title>
-  <link rel="stylesheet" href="/css/style.css?v=12" />
+  <link rel="stylesheet" href="/css/style.css?v=13" />
 </head>
 <body>
 
@@ -96,9 +96,16 @@
           <div class="lb-map-wrap" id="lb-map-wrap">
             <button class="lb-action-btn" id="lb-map-btn" title="Ver ubicación en mapa" style="display:none;padding:0.2rem 0.5rem;font-size:0.85rem">📍</button>
             <div class="lb-map-widget" id="lb-map-widget">
-              <div class="lb-map-widget-inner">
-                <img id="lb-map-img" src="" alt="Mapa" />
-                <div class="lb-map-dot" id="lb-map-dot"></div>
+              <div class="lb-map-widget-inner" id="lb-map-widget-inner">
+                <div class="map-zoom-controls">
+                  <button type="button" class="map-zoom-btn" id="lb-map-zoom-in">+</button>
+                  <button type="button" class="map-zoom-btn" id="lb-map-zoom-out">−</button>
+                  <button type="button" class="map-zoom-btn" id="lb-map-zoom-reset" style="font-size:0.72rem">⊙</button>
+                </div>
+                <div class="map-zoom-inner" id="lb-map-zoom-inner">
+                  <img id="lb-map-img" src="" alt="Mapa" />
+                  <div class="lb-map-dot" id="lb-map-dot"></div>
+                </div>
               </div>
               <div class="lb-map-footer" id="lb-map-footer"></div>
             </div>
@@ -822,9 +829,101 @@
       }
     });
 
+    /* ── Map widget zoom/pan ── */
+    const lbMapContainer = document.getElementById("lb-map-widget-inner");
+    const lbMapInner     = document.getElementById("lb-map-zoom-inner");
+    let lmScale = 1, lmTx = 0, lmTy = 0;
+    let lmDrag = false, lmDidDrag = false, lmLX = 0, lmLY = 0;
+
+    function lmApply() {
+      lbMapInner.style.transform = `translate(${lmTx}px,${lmTy}px) scale(${lmScale})`;
+    }
+    function lmClamp() {
+      const cw = lbMapContainer.offsetWidth, ch = lbMapContainer.offsetHeight;
+      const img = document.getElementById("lb-map-img");
+      const iw = img.offsetWidth * lmScale, ih = img.offsetHeight * lmScale;
+      const mx = Math.max(0,(iw-cw)/2), my = Math.max(0,(ih-ch)/2);
+      lmTx = Math.max(-mx, Math.min(mx, lmTx));
+      lmTy = Math.max(-my, Math.min(my, lmTy));
+      if (iw<=cw) lmTx=0; if (ih<=ch) lmTy=0;
+    }
+    function lmZoom(factor, ox, oy) {
+      const prev = lmScale;
+      lmScale = Math.max(1, Math.min(8, lmScale * factor));
+      const r = lmScale / prev;
+      lmTx = ox+(lmTx-ox)*r; lmTy = oy+(lmTy-oy)*r;
+      lmClamp(); lmApply();
+    }
+    function lmReset() { lmScale=1; lmTx=0; lmTy=0; lmApply(); }
+    function lmCenterOnPin() {
+      const img = document.getElementById("lb-map-img");
+      const dot = document.getElementById("lb-map-dot");
+      if (!img.offsetWidth || !dot.style.left) return;
+      lmScale = 3;
+      const nx = parseFloat(dot.style.left) / 100;
+      const ny = parseFloat(dot.style.top)  / 100;
+      lmTx = -(nx - 0.5) * img.offsetWidth  * lmScale;
+      lmTy = -(ny - 0.5) * img.offsetHeight * lmScale;
+      lmClamp(); lmApply();
+    }
+
+    lbMapContainer.addEventListener("wheel", (e) => {
+      e.preventDefault();
+      const rect = lbMapContainer.getBoundingClientRect();
+      const ox = e.clientX - rect.left - lbMapContainer.offsetWidth / 2;
+      const oy = e.clientY - rect.top  - lbMapContainer.offsetHeight / 2;
+      lmZoom(e.deltaY < 0 ? 1.2 : 0.833, ox, oy);
+    }, { passive: false });
+
+    lbMapContainer.addEventListener("mousedown", (e) => {
+      lmDrag=true; lmDidDrag=false; lmLX=e.clientX; lmLY=e.clientY;
+      lbMapContainer.style.cursor="grabbing"; e.preventDefault();
+    });
+    document.addEventListener("mousemove", (e) => {
+      if (!lmDrag) return;
+      if (Math.abs(e.clientX-lmLX)>2||Math.abs(e.clientY-lmLY)>2) lmDidDrag=true;
+      lmTx+=e.clientX-lmLX; lmTy+=e.clientY-lmLY; lmLX=e.clientX; lmLY=e.clientY;
+      lmClamp(); lmApply();
+    });
+    document.addEventListener("mouseup", () => {
+      if (lmDrag) { lmDrag=false; lbMapContainer.style.cursor="grab"; }
+    });
+
+    let lmTouches=[], lmLastPinch=0;
+    lbMapContainer.addEventListener("touchstart", (e) => {
+      lmTouches=[...e.touches];
+      if (lmTouches.length===1){ lmLX=lmTouches[0].clientX; lmLY=lmTouches[0].clientY; lmDidDrag=false; }
+      else if(lmTouches.length===2) lmLastPinch=Math.hypot(lmTouches[1].clientX-lmTouches[0].clientX,lmTouches[1].clientY-lmTouches[0].clientY);
+      e.preventDefault();
+    }, { passive:false });
+    lbMapContainer.addEventListener("touchmove", (e) => {
+      if(e.touches.length===1){
+        lmTx+=e.touches[0].clientX-lmLX; lmTy+=e.touches[0].clientY-lmLY;
+        lmLX=e.touches[0].clientX; lmLY=e.touches[0].clientY; lmDidDrag=true;
+        lmClamp(); lmApply();
+      } else if(e.touches.length===2){
+        const dist=Math.hypot(e.touches[1].clientX-e.touches[0].clientX,e.touches[1].clientY-e.touches[0].clientY);
+        const rect=lbMapContainer.getBoundingClientRect();
+        const ox=(e.touches[0].clientX+e.touches[1].clientX)/2-rect.left-lbMapContainer.offsetWidth/2;
+        const oy=(e.touches[0].clientY+e.touches[1].clientY)/2-rect.top-lbMapContainer.offsetHeight/2;
+        lmZoom(dist/lmLastPinch,ox,oy); lmLastPinch=dist;
+      }
+      e.preventDefault();
+    }, { passive:false });
+
+    document.getElementById("lb-map-zoom-in").addEventListener("click",    () => lmZoom(1.3,0,0));
+    document.getElementById("lb-map-zoom-out").addEventListener("click",   () => lmZoom(0.77,0,0));
+    document.getElementById("lb-map-zoom-reset").addEventListener("click", lmReset);
+
     document.getElementById("lb-map-btn").addEventListener("click", (e) => {
       e.stopPropagation();
-      document.getElementById("lb-map-widget").classList.toggle("open");
+      const widget = document.getElementById("lb-map-widget");
+      const wasOpen = widget.classList.contains("open");
+      widget.classList.toggle("open");
+      if (!wasOpen) {
+        lmReset();
+        setTimeout(lmCenterOnPin, 60);
+      }
     });
     document.addEventListener("click", (e) => {
       if (!e.target.closest("#lb-map-wrap")) {
