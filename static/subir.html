@@ -5,7 +5,7 @@
   <link rel="icon" href="/favicon.svg" type="image/svg+xml" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
   <title>Subir foto — Forza Gallery</title>
-  <link rel="stylesheet" href="/css/style.css?v=10" />
+  <link rel="stylesheet" href="/css/style.css?v=11" />
 </head>
 <body>
 
@@ -55,6 +55,25 @@
             <option value="FH4">Forza Horizon 4 (2018)</option>
             <option value="FH5">Forza Horizon 5 (2021)</option>
           </select>
+        </div>
+
+        <div class="form-group" id="map-group" style="display:none">
+          <label>
+            Ubicación en el mapa
+            <small style="text-transform:none;font-size:0.8em;letter-spacing:0">(opcional — haz clic en el mapa)</small>
+          </label>
+          <div class="map-selector-wrap">
+            <div class="map-selector-label">
+              <span>Haz clic para marcar la ubicación</span>
+              <button type="button" class="map-selector-clear" id="map-clear">✕ Quitar</button>
+            </div>
+            <div class="map-selector" id="map-selector">
+              <img id="map-img" src="" alt="Mapa del juego" draggable="false" />
+              <div class="map-pin" id="map-pin"></div>
+            </div>
+          </div>
+          <input type="hidden" id="map-x" />
+          <input type="hidden" id="map-y" />
         </div>
 
         <div class="form-group">
@@ -174,6 +193,43 @@
       tagsHidden.value = [...activeTags].map(t => `#${t}`).join(" ");
     }
 
+    /* ── Map selector ── */
+    const MAP_EXTS = { FH1:"jpg", FH2:"png", FH3:"jpg", FH4:"jpg", FH5:"jpg" };
+
+    document.getElementById("juego").addEventListener("change", function() {
+      const juego = this.value;
+      const mapGroup = document.getElementById("map-group");
+      if (juego && MAP_EXTS[juego]) {
+        document.getElementById("map-img").src = `/img/maps/${juego.toLowerCase()}.${MAP_EXTS[juego]}`;
+        mapGroup.style.display = "";
+        clearMapPin();
+      } else {
+        mapGroup.style.display = "none";
+      }
+    });
+
+    function clearMapPin() {
+      document.getElementById("map-pin").classList.remove("visible");
+      document.getElementById("map-x").value = "";
+      document.getElementById("map-y").value = "";
+      document.getElementById("map-clear").classList.remove("visible");
+    }
+
+    document.getElementById("map-clear").addEventListener("click", clearMapPin);
+
+    document.getElementById("map-selector").addEventListener("click", function(e) {
+      const rect = this.getBoundingClientRect();
+      const x = (e.clientX - rect.left) / rect.width;
+      const y = (e.clientY - rect.top) / rect.height;
+      const pin = document.getElementById("map-pin");
+      pin.style.left = `${x * 100}%`;
+      pin.style.top  = `${y * 100}%`;
+      pin.classList.add("visible");
+      document.getElementById("map-x").value = x.toFixed(4);
+      document.getElementById("map-y").value = y.toFixed(4);
+      document.getElementById("map-clear").classList.add("visible");
+    });
+
     /* ── Submit ── */
     document.getElementById("upload-form").addEventListener("submit", async (e) => {
       e.preventDefault();
@@ -188,6 +244,9 @@
       const desc = document.getElementById("descripcion").value.trim();
       if (desc) fd.append("descripcion", desc);
       if (tagsHidden.value) fd.append("tags", tagsHidden.value);
+      const mapX = document.getElementById("map-x").value;
+      const mapY = document.getElementById("map-y").value;
+      if (mapX && mapY) { fd.append("map_x", mapX); fd.append("map_y", mapY); }
 
       btn.disabled = true;
       btn.textContent = "Subiendo...";

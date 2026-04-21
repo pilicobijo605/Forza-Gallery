@@ -17,6 +17,8 @@ class ImagenOut(BaseModel):
     descripcion: str | None
     filename: str
     visitas: int = 0
+    map_x: float | None = None
+    map_y: float | None = None
     usuario_id: int
     username: str = ""
     created_at: datetime
@@ -36,6 +38,8 @@ class ImagenOut(BaseModel):
                 "descripcion": data.descripcion,
                 "filename": data.filename,
                 "visitas": data.visitas,
+                "map_x": data.map_x,
+                "map_y": data.map_y,
                 "usuario_id": data.usuario_id,
                 "username": usuario.username if usuario else "",
                 "created_at": data.created_at,

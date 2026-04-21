@@ -50,8 +50,10 @@ async def upload_imagen(
     juego: str = Form(...),
     descripcion: str | None = Form(None),
     tags: str | None = Form(None),
+    map_x: float | None = Form(None),
+    map_y: float | None = Form(None),
 ):
-    return await imagen_service.upload_imagen(db, file, titulo, juego, descripcion, tags, user.id)
+    return await imagen_service.upload_imagen(db, file, titulo, juego, descripcion, tags, user.id, map_x, map_y)
 
 
 @router.put("/{imagen_id}", response_model=ImagenOut)

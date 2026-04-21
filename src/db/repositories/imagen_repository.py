@@ -80,6 +80,8 @@ class ImagenRepository:
         filename: str,
         usuario_id: int,
         tags: list = [],
+        map_x: float | None = None,
+        map_y: float | None = None,
     ) -> Imagen:
         img = Imagen(
             titulo=titulo,
@@ -88,6 +90,8 @@ class ImagenRepository:
             filename=filename,
             usuario_id=usuario_id,
             tags=tags,
+            map_x=map_x,
+            map_y=map_y,
         )
         self.db.add(img)
         await self.db.commit()

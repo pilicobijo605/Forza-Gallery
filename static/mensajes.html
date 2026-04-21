@@ -5,7 +5,7 @@
   <link rel="icon" href="/favicon.svg" type="image/svg+xml" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
   <title>Mensajes — Forza Gallery</title>
-  <link rel="stylesheet" href="/css/style.css?v=10" />
+  <link rel="stylesheet" href="/css/style.css?v=11" />
 </head>
 <body style="display:flex;flex-direction:column;height:100vh;overflow:hidden">
 
@@ -47,6 +47,10 @@
         <div class="chat-messages" id="chat-messages"></div>
 
         <div class="chat-input-area">
+          <div class="emoji-picker-wrap" id="emoji-picker-wrap">
+            <button class="emoji-open-btn" id="emoji-open-btn" type="button" title="Emojis">😊</button>
+            <div class="emoji-picker" id="emoji-picker"></div>
+          </div>
           <textarea
             class="chat-input"
             id="chat-input"
@@ -188,6 +192,67 @@
     document.getElementById("chat-back-btn").addEventListener("click", () => {
       layout.classList.remove("chat-open");
       activeUsername = null;
+    });
+
+    /* ── Emoji picker ── */
+    const EMOJI_CATS = [
+      { icon:"😀", emojis:["😀","😂","🥹","😍","🤩","😎","🥺","😭","😤","🤔","😴","🤯","🥳","🫡","😏","😇","🤣","😅","🙄","😈","🥴","😬","🫠","🤫","😶","😑","🙃","😒","😞","😔"] },
+      { icon:"👍", emojis:["👍","👎","👏","🙌","🤝","💪","🤙","✌️","👌","🫶","🤜","👋","🫂","🙏","💅","🫵","☝️","✊","🤛","🤞"] },
+      { icon:"❤️", emojis:["❤️","🧡","💛","💚","💙","💜","🖤","💔","❤️‍🔥","💯","💕","💞","💓","💗","💖","✨","⭐","🌟","💫","🔥"] },
+      { icon:"🔥", emojis:["🔥","⭐","💫","🏆","🎯","🚀","💀","👀","🫠","🎉","🎊","💥","🌊","🏔️","🌅","🌧️","💣","🎮","🕹️","🎲"] },
+      { icon:"🏎️", emojis:["🏎️","🚗","🏁","🛞","⚡","🏆","🥇","🎮","🗺️","🏜️","🏔️","🌋","🏝️","🌃","💨","🔑","🛣️","⛽","🔧","🛻"] },
+    ];
+    let _emojiCat = 0;
+
+    function buildEmojiPicker() {
+      const picker = document.getElementById("emoji-picker");
+      const cats   = EMOJI_CATS;
+      picker.innerHTML = `
+        <div class="emoji-cats">
+          ${cats.map((c, i) => `<button class="emoji-cat${i === 0 ? " active" : ""}" data-idx="${i}" type="button">${c.icon}</button>`).join("")}
+        </div>
+        <div class="emoji-grid" id="emoji-grid"></div>
+      `;
+      picker.querySelectorAll(".emoji-cat").forEach(btn =>
+        btn.addEventListener("click", () => {
+          _emojiCat = parseInt(btn.dataset.idx);
+          picker.querySelectorAll(".emoji-cat").forEach(b => b.classList.toggle("active", b === btn));
+          renderEmojiGrid();
+        })
+      );
+      renderEmojiGrid();
+    }
+
+    function renderEmojiGrid() {
+      const grid = document.getElementById("emoji-grid");
+      grid.innerHTML = EMOJI_CATS[_emojiCat].emojis.map(e =>
+        `<button type="button" data-e="${e}">${e}</button>`
+      ).join("");
+      grid.querySelectorAll("button").forEach(btn =>
+        btn.addEventListener("click", () => insertEmoji(btn.dataset.e))
+      );
+    }
+
+    function insertEmoji(emoji) {
+      const ta = document.getElementById("chat-input");
+      const start = ta.selectionStart;
+      const end   = ta.selectionEnd;
+      ta.value = ta.value.slice(0, start) + emoji + ta.value.slice(end);
+      ta.selectionStart = ta.selectionEnd = start + emoji.length;
+      ta.focus();
+      ta.dispatchEvent(new Event("input"));
+    }
+
+    buildEmojiPicker();
+
+    const emojiOpenBtn = document.getElementById("emoji-open-btn");
+    const emojiPicker  = document.getElementById("emoji-picker");
+    emojiOpenBtn.addEventListener("click", (e) => {
+      e.stopPropagation();
+      emojiPicker.classList.toggle("open");
+    });
+    document.addEventListener("click", (e) => {
+      if (!e.target.closest("#emoji-picker-wrap")) emojiPicker.classList.remove("open");
     });
 
     init();

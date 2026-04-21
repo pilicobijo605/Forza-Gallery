@@ -5,7 +5,7 @@
   <link rel="icon" href="/favicon.svg" type="image/svg+xml" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
   <title>Galería — Forza Gallery</title>
-  <link rel="stylesheet" href="/css/style.css?v=10" />
+  <link rel="stylesheet" href="/css/style.css?v=11" />
 </head>
 <body>
 
@@ -71,8 +71,17 @@
     <div class="gallery-sentinel" id="gallery-sentinel"></div>
 
     <div id="trending-panel" style="display:none">
-      <div class="trending-section">
-        <div class="trending-grid" id="trending-grid"></div>
+      <div class="coverflow-section">
+        <div class="coverflow-container">
+          <button class="coverflow-arrow" id="cf-prev">&#8249;</button>
+          <div class="coverflow-stage" id="cf-stage"></div>
+          <button class="coverflow-arrow" id="cf-next">&#8250;</button>
+        </div>
+        <div class="coverflow-dots" id="cf-dots"></div>
+        <div class="coverflow-info">
+          <div class="coverflow-info-title" id="cf-title"></div>
+          <div class="coverflow-info-sub" id="cf-sub"></div>
+        </div>
       </div>
     </div>
   </main>
@@ -106,6 +115,16 @@
               <span class="lb-action-icon">💬</span><span id="lb-comment-count">0</span>
             </button>
             <button class="lb-action-btn" id="lb-edit-toggle" style="display:none" title="Editar">✏️</button>
+            <div class="lb-map-wrap" id="lb-map-wrap">
+              <button class="lb-action-btn" id="lb-map-btn" title="Ver ubicación en mapa" style="display:none">📍</button>
+              <div class="lb-map-widget" id="lb-map-widget">
+                <div class="lb-map-widget-inner">
+                  <img id="lb-map-img" src="" alt="Mapa" />
+                  <div class="lb-map-dot" id="lb-map-dot"></div>
+                </div>
+                <div class="lb-map-footer" id="lb-map-footer"></div>
+              </div>
+            </div>
             <span class="lb-action-stat" title="Visitas">
               <span class="lb-action-icon">👁</span><span id="lb-views-count">0</span>
             </span>
@@ -381,6 +400,22 @@
       document.getElementById("lb-edit-form").style.display = "none";
       document.getElementById("lb-edit-toggle").className = "lb-edit-toggle";
 
+      const MAP_EXTS = { FH1:"jpg", FH2:"png", FH3:"jpg", FH4:"jpg", FH5:"jpg" };
+      const MAP_NAMES = { FH1:"Colorado", FH2:"Europa del Sur", FH3:"Australia", FH4:"Gran Bretaña", FH5:"México" };
+      const mapBtn = document.getElementById("lb-map-btn");
+      const mapWidget = document.getElementById("lb-map-widget");
+      mapWidget.classList.remove("open");
+      if (img.map_x != null && img.map_y != null) {
+        mapBtn.style.display = "inline-flex";
+        const ext = MAP_EXTS[img.juego] || "jpg";
+        document.getElementById("lb-map-img").src = `/img/maps/${img.juego.toLowerCase()}.${ext}`;
+        document.getElementById("lb-map-dot").style.left = `${img.map_x * 100}%`;
+        document.getElementById("lb-map-dot").style.top  = `${img.map_y * 100}%`;
+        document.getElementById("lb-map-footer").textContent = `${img.juego} · ${MAP_NAMES[img.juego] || ""}`;
+      } else {
+        mapBtn.style.display = "none";
+      }
+
       const editBtn = document.getElementById("lb-edit-toggle");
       editBtn.style.display = (currentUser && currentUser.id === img.usuario_id) ? "inline-flex" : "none";
 
@@ -393,6 +428,7 @@
       document.getElementById("lb-edit-form").style.display = "none";
       document.getElementById("lb-edit-toggle").className = "lb-edit-toggle";
       document.getElementById("lb-share-menu").style.display = "none";
+      document.getElementById("lb-map-widget").classList.remove("open");
       currentLbId   = null;
       currentLbData = null;
     }
@@ -784,6 +820,16 @@
       }
     });
 
+    document.getElementById("lb-map-btn").addEventListener("click", (e) => {
+      e.stopPropagation();
+      document.getElementById("lb-map-widget").classList.toggle("open");
+    });
+    document.addEventListener("click", (e) => {
+      if (!e.target.closest("#lb-map-wrap")) {
+        document.getElementById("lb-map-widget")?.classList.remove("open");
+      }
+    });
+
     document.getElementById("lb-share-btn").addEventListener("click", (e) => {
       e.stopPropagation();
       const menu = document.getElementById("lb-share-menu");
@@ -825,6 +871,96 @@
 
     let _trendingLoaded = false;
     let _trendingVisible = false;
+    let _cfData = [];
+    let _cfIndex = 0;
+
+    function buildCoverflow(imgs) {
+      _cfData = imgs;
+      _cfIndex = 0;
+      const stage = document.getElementById("cf-stage");
+      stage.innerHTML = imgs.map((img, i) => `
+        <div class="cf-item" data-idx="${i}" data-id="${img.id}">
+          <img src="${img.filename}" alt="${img.titulo}" loading="lazy" onerror="this.style.display='none'">
+          <div class="cf-overlay">
+            <div class="cf-overlay-title">${img.titulo}</div>
+            <span class="juego-badge ${img.juego}" style="margin-top:0.2rem;font-size:0.65rem">${img.juego}</span>
+          </div>
+        </div>
+      `).join("");
+
+      const dotsEl = document.getElementById("cf-dots");
+      dotsEl.innerHTML = imgs.map((_, i) =>
+        `<div class="cf-dot${i === 0 ? " active" : ""}" data-idx="${i}"></div>`
+      ).join("");
+      dotsEl.querySelectorAll(".cf-dot").forEach(dot =>
+        dot.addEventListener("click", () => goToCf(parseInt(dot.dataset.idx)))
+      );
+
+      stage.querySelectorAll(".cf-item").forEach(item =>
+        item.addEventListener("click", () => {
+          const idx = parseInt(item.dataset.idx);
+          if (idx === _cfIndex) {
+            fetchImagen(item.dataset.id).then(img => {
+              document.getElementById("trending-toggle-btn").click();
+              openLightbox(img);
+            }).catch(() => {});
+          } else {
+            goToCf(idx);
+          }
+        })
+      );
+
+      document.getElementById("cf-prev").addEventListener("click", () => goToCf(_cfIndex - 1));
+      document.getElementById("cf-next").addEventListener("click", () => goToCf(_cfIndex + 1));
+
+      document.addEventListener("keydown", (e) => {
+        if (!_trendingVisible) return;
+        if (e.key === "ArrowLeft")  goToCf(_cfIndex - 1);
+        if (e.key === "ArrowRight") goToCf(_cfIndex + 1);
+      });
+
+      updateCoverflow();
+    }
+
+    function updateCoverflow() {
+      const items = [...document.querySelectorAll(".cf-item")];
+      items.forEach((item, i) => {
+        const offset = i - _cfIndex;
+        const absOff = Math.abs(offset);
+        if (offset === 0) {
+          item.style.transform = "translateX(0px) rotateY(0deg) scale(1)";
+          item.style.opacity   = "1";
+          item.style.zIndex    = "10";
+          item.classList.add("cf-active");
+        } else {
+          const dir = offset > 0 ? 1 : -1;
+          const tx  = dir * (185 + (absOff - 1) * 40);
+          const ry  = dir * 52;
+          const sc  = Math.max(0.66 - (absOff - 1) * 0.1, 0.2);
+          const op  = Math.max(0.5 - (absOff - 1) * 0.15, 0.05);
+          item.style.transform = `translateX(${tx}px) rotateY(${ry}deg) scale(${sc})`;
+          item.style.opacity   = String(op);
+          item.style.zIndex    = String(Math.max(10 - absOff, 0));
+          item.classList.remove("cf-active");
+        }
+      });
+
+      const cur = _cfData[_cfIndex];
+      if (cur) {
+        document.getElementById("cf-title").textContent = cur.titulo;
+        document.getElementById("cf-sub").textContent   = `${cur.juego} · ${cur.visitas || 0} visitas`;
+      }
+      document.querySelectorAll(".cf-dot").forEach((d, i) =>
+        d.classList.toggle("active", i === _cfIndex)
+      );
+      document.getElementById("cf-prev").disabled = _cfIndex === 0;
+      document.getElementById("cf-next").disabled = _cfIndex === _cfData.length - 1;
+    }
+
+    function goToCf(idx) {
+      _cfIndex = Math.max(0, Math.min(_cfData.length - 1, idx));
+      updateCoverflow();
+    }
 
     async function loadTrending() {
       if (_trendingLoaded) return;
@@ -832,18 +968,11 @@
         const imgs = await fetchTrending(12);
         _trendingLoaded = true;
         if (!imgs.length) {
-          document.getElementById("trending-panel").innerHTML = '<div class="state-box"><span class="state-icon">🏎</span><p>Sin datos de trending aún.</p></div>';
+          document.getElementById("trending-panel").innerHTML =
+            '<div class="state-box"><span class="state-icon">🏎</span><p>Sin datos de trending aún.</p></div>';
           return;
         }
-        document.getElementById("trending-grid").innerHTML = imgs.map(img => `
-          <a href="/galeria.html?id=${img.id}" class="img-card" style="display:block;aspect-ratio:4/3;text-decoration:none;">
-            <img class="img-thumb" src="${img.filename}" alt="${img.titulo}" loading="lazy" onerror="this.style.display='none'">
-            <div class="card-overlay" style="opacity:1">
-              <div class="img-title" style="font-size:0.8rem">${img.titulo}</div>
-              <div class="img-meta"><span class="juego-badge ${img.juego}">${img.juego}</span></div>
-            </div>
-          </a>
-        `).join("");
+        buildCoverflow(imgs);
       } catch {}
     }
 

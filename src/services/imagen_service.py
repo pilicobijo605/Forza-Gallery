@@ -66,6 +66,8 @@ async def upload_imagen(
     descripcion: str | None,
     tags_raw: str | None,
     usuario_id: int,
+    map_x: float | None = None,
+    map_y: float | None = None,
 ) -> ImagenOut:
     if file.content_type not in ALLOWED_TYPES:
         raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail="Formato no permitido")
@@ -79,7 +81,7 @@ async def upload_imagen(
         content,
         folder="forzagram",
         resource_type="image",
-        quality="auto",
+        quality=90,
         fetch_format="auto",
     )
     image_url = result["secure_url"]
@@ -89,7 +91,7 @@ async def upload_imagen(
     tags = await tag_repo.get_or_create_many(tag_names)
 
     repo = ImagenRepository(db)
-    img = await repo.create(titulo, juego, descripcion, image_url, usuario_id, tags)
+    img = await repo.create(titulo, juego, descripcion, image_url, usuario_id, tags, map_x, map_y)
     return ImagenOut.model_validate(img)
 
 
