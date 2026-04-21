@@ -4,7 +4,7 @@
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
   <title>Perfil — Forza Gallery</title>
-  <link rel="stylesheet" href="/css/style.css?v=5" />
+  <link rel="stylesheet" href="/css/style.css?v=6" />
 </head>
 <body>
 
@@ -51,6 +51,10 @@
           <div class="perfil-follow-actions" id="perfil-follow-actions" style="display:none">
             <button class="follow-btn" id="btn-seguir">Seguir</button>
             <button class="favorito-btn" id="btn-favorito" title="Añadir a favoritos">⭐</button>
+            <a class="msg-btn" id="btn-mensaje" href="#">
+              <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z"/></svg>
+              Mensaje
+            </a>
           </div>
         </div>
       </div>
@@ -101,7 +105,6 @@
     <div class="lb-panel">
       <div class="lb-header">
         <div class="lb-title-bar" id="lb-title"></div>
-        <button class="lb-edit-toggle" id="lb-edit-toggle" style="display:none" title="Editar">✏️</button>
         <button class="lb-date" id="lb-date"></button>
       </div>
       <div class="lb-img-wrap">
@@ -125,6 +128,7 @@
             <button class="lb-action-btn" id="lb-comment-btn" title="Comentarios">
               <span class="lb-action-icon">💬</span><span id="lb-comment-count">0</span>
             </button>
+            <button class="lb-action-btn" id="lb-edit-toggle" style="display:none" title="Editar">✏️</button>
             <span class="lb-action-stat" title="Visitas">
               <span class="lb-action-icon">👁</span><span id="lb-views-count">0</span>
             </span>
@@ -250,6 +254,7 @@
           const btnSeguir = document.getElementById("btn-seguir");
           if (perfil.yo_sigo) { btnSeguir.textContent = "Siguiendo"; btnSeguir.classList.add("siguiendo"); }
           if (perfil.es_favorito) document.getElementById("btn-favorito").classList.add("active");
+          document.getElementById("btn-mensaje").href = `/mensajes.html?u=${username}`;
         }
 
         const grid = document.getElementById("perfil-gallery");
@@ -380,7 +385,7 @@
           <div class="lb-comment-item" data-id="${c.id}">
             <div class="lb-comment-body">
               <div class="lb-comment-header">
-                <span class="lb-comment-author">${c.username}</span>
+                <a class="lb-comment-author" href="/perfil.html?u=${c.username}">${c.username}</a>
                 <span class="lb-comment-time">${timeAgo(c.created_at)}</span>
               </div>
               <span class="lb-comment-text">${c.contenido.replace(/</g,"&lt;")}</span>

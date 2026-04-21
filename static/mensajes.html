@@ -1,0 +1,195 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Mensajes — Forza Gallery</title>
+  <link rel="stylesheet" href="/css/style.css?v=6" />
+</head>
+<body style="display:flex;flex-direction:column;height:100vh;overflow:hidden">
+
+  <nav class="navbar">
+    <a href="/index.html" class="navbar-brand">FORZA<span class="brand-dot"></span>GALLERY</a>
+    <ul class="navbar-links" id="nav-auth"></ul>
+  </nav>
+
+  <div class="teal-divider" style="flex-shrink:0"></div>
+
+  <div class="chat-layout" id="chat-layout">
+
+    <!-- Sidebar: lista de conversaciones -->
+    <div class="chat-sidebar">
+      <div class="chat-sidebar-header">Mensajes</div>
+      <div class="chat-conv-list" id="chat-conv-list">
+        <div class="notif-empty">Cargando...</div>
+      </div>
+    </div>
+
+    <!-- Panel principal: conversación abierta -->
+    <div class="chat-main" id="chat-main">
+      <div class="chat-placeholder" id="chat-placeholder">
+        <span class="chat-placeholder-icon">💬</span>
+        <span>Selecciona una conversación</span>
+      </div>
+
+      <div id="chat-active" style="display:none;flex-direction:column;flex:1;overflow:hidden">
+        <div class="chat-main-header">
+          <button class="chat-back-btn" id="chat-back-btn" aria-label="Volver">
+            <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><polyline points="15 18 9 12 15 6"/></svg>
+          </button>
+          <img class="chat-main-avatar" id="chat-header-avatar" src="/img/default-avatar.svg" alt="" />
+          <div class="chat-main-name">
+            <a id="chat-header-name" href="#">—</a>
+          </div>
+        </div>
+
+        <div class="chat-messages" id="chat-messages"></div>
+
+        <div class="chat-input-area">
+          <textarea
+            class="chat-input"
+            id="chat-input"
+            placeholder="Escribe un mensaje..."
+            rows="1"
+            maxlength="2000"
+          ></textarea>
+          <button class="chat-send-btn" id="chat-send-btn" title="Enviar" disabled>
+            <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><line x1="22" y1="2" x2="11" y2="13"/><polygon points="22 2 15 22 11 13 2 9 22 2"/></svg>
+          </button>
+        </div>
+      </div>
+    </div>
+
+  </div>
+
+  <script src="/js/api.js"></script>
+  <script src="/js/toast.js"></script>
+  <script>
+    requireAuth("/login.html");
+    updateNavAuth();
+
+    let meUser = null;
+    let activeUsername = null;
+
+    const layout      = document.getElementById("chat-layout");
+    const convList    = document.getElementById("chat-conv-list");
+    const placeholder = document.getElementById("chat-placeholder");
+    const chatActive  = document.getElementById("chat-active");
+    const msgContainer = document.getElementById("chat-messages");
+    const inputEl     = document.getElementById("chat-input");
+    const sendBtn     = document.getElementById("chat-send-btn");
+
+    async function init() {
+      meUser = await fetchMe();
+      const u = new URLSearchParams(location.search).get("u");
+      await loadConversaciones();
+      if (u) openChat(u);
+    }
+
+    async function loadConversaciones() {
+      try {
+        const convs = await getConversaciones();
+        if (!convs.length) {
+          convList.innerHTML = '<div class="notif-empty">Ninguna conversación aún</div>';
+          return;
+        }
+        convList.innerHTML = convs.map(c => `
+          <div class="chat-conv-item${c.no_leidos ? " unread" : ""}" data-username="${c.otro_username}">
+            <img class="chat-conv-avatar" src="${c.otro_avatar || "/img/default-avatar.svg"}" alt="" onerror="this.src='/img/default-avatar.svg'" />
+            <div class="chat-conv-info">
+              <div class="chat-conv-name">${c.otro_username}</div>
+              <div class="chat-conv-preview">${c.ultimo_mensaje ? escHtml(c.ultimo_mensaje) : "<em>Sin mensajes</em>"}</div>
+            </div>
+            <div class="chat-conv-meta">
+              <span class="chat-conv-time">${c.ultimo_at ? timeAgo(c.ultimo_at) : ""}</span>
+              ${c.no_leidos ? `<span class="chat-conv-badge">${c.no_leidos}</span>` : ""}
+            </div>
+          </div>
+        `).join("");
+        convList.querySelectorAll(".chat-conv-item").forEach(el => {
+          el.addEventListener("click", () => openChat(el.dataset.username));
+        });
+      } catch { convList.innerHTML = '<div class="notif-empty">Error al cargar</div>'; }
+    }
+
+    async function openChat(username) {
+      activeUsername = username;
+      layout.classList.add("chat-open");
+      placeholder.style.display = "none";
+      chatActive.style.display = "flex";
+
+      document.getElementById("chat-header-name").textContent = username;
+      document.getElementById("chat-header-name").href = `/perfil.html?u=${username}`;
+
+      convList.querySelectorAll(".chat-conv-item").forEach(el => {
+        el.classList.toggle("active", el.dataset.username === username);
+        if (el.dataset.username === username) el.querySelector(".chat-conv-badge")?.remove();
+      });
+
+      apiFetch(`/usuarios/${username}`).then(p => {
+        if (p.avatar_url) document.getElementById("chat-header-avatar").src = p.avatar_url;
+      }).catch(() => {});
+
+      await renderMensajes(username);
+    }
+
+    async function renderMensajes(username) {
+      try {
+        const msgs = await getMensajes(username);
+        if (!msgs.length) {
+          msgContainer.innerHTML = '<div class="chat-empty">Ningún mensaje aún. ¡Sé el primero!</div>';
+        } else {
+          msgContainer.innerHTML = msgs.map(m => {
+            const mine = m.autor_id === meUser.id;
+            return `<div class="msg-bubble-wrap ${mine ? "mine" : "theirs"}">
+              <div class="msg-bubble">${escHtml(m.contenido)}</div>
+              <div class="msg-time">${timeAgo(m.created_at)}</div>
+            </div>`;
+          }).join("");
+          msgContainer.scrollTop = msgContainer.scrollHeight;
+        }
+      } catch { msgContainer.innerHTML = '<div class="chat-empty">Error al cargar mensajes</div>'; }
+    }
+
+    function escHtml(s) {
+      return s.replace(/&/g,"&amp;").replace(/</g,"&lt;").replace(/>/g,"&gt;").replace(/\n/g,"<br>");
+    }
+
+    inputEl.addEventListener("input", () => {
+      sendBtn.disabled = !inputEl.value.trim();
+      inputEl.style.height = "auto";
+      inputEl.style.height = Math.min(inputEl.scrollHeight, 120) + "px";
+    });
+
+    inputEl.addEventListener("keydown", (e) => {
+      if (e.key === "Enter" && !e.shiftKey) { e.preventDefault(); sendBtn.click(); }
+    });
+
+    sendBtn.addEventListener("click", async () => {
+      const texto = inputEl.value.trim();
+      if (!texto || !activeUsername) return;
+      sendBtn.disabled = true;
+      try {
+        await enviarMensaje(activeUsername, texto);
+        inputEl.value = "";
+        inputEl.style.height = "auto";
+        await renderMensajes(activeUsername);
+        await loadConversaciones();
+        convList.querySelectorAll(".chat-conv-item").forEach(el => {
+          if (el.dataset.username === activeUsername) el.classList.add("active");
+        });
+      } catch(err) {
+        showToast(err.message, "error");
+        sendBtn.disabled = false;
+      }
+    });
+
+    document.getElementById("chat-back-btn").addEventListener("click", () => {
+      layout.classList.remove("chat-open");
+      activeUsername = null;
+    });
+
+    init();
+  </script>
+</body>
+</html>

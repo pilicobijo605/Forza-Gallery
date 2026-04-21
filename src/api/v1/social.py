@@ -2,6 +2,7 @@ from fastapi import APIRouter, HTTPException, status
 
 from src.core.dependencies import CurrentActiveUser, DbSession, OptionalUser
 from src.core.moderation import contains_profanity
+from src.db.repositories.notificacion_repository import NotificacionRepository
 from src.db.repositories.comentario_repository import ComentarioRepository
 from src.db.repositories.favorito_usuario_repository import FavoritoUsuarioRepository
 from src.db.repositories.guardado_repository import GuardadoRepository
@@ -20,11 +21,20 @@ router = APIRouter(prefix="/social", tags=["social"])
 
 @router.post("/imagenes/{imagen_id}/like")
 async def toggle_like(imagen_id: int, db: DbSession, user: CurrentActiveUser):
-    if not await ImagenRepository(db).get_by_id(imagen_id):
+    img = await ImagenRepository(db).get_by_id(imagen_id)
+    if not img:
         raise HTTPException(status.HTTP_404_NOT_FOUND, "Imagen no encontrada")
     repo = LikeRepository(db)
     liked = await repo.toggle(user.id, imagen_id)
     count = await repo.count(imagen_id)
+    if liked and img.usuario_id != user.id:
+        try:
+            await NotificacionRepository(db).crear(
+                usuario_id=img.usuario_id, tipo="like",
+                from_username=user.username, imagen_id=imagen_id,
+            )
+        except Exception:
+            pass
     return {"liked": liked, "count": count}
 
 

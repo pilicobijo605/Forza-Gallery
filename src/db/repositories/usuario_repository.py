@@ -12,6 +12,10 @@ class UsuarioRepository:
         result = await self.db.execute(select(Usuario).where(Usuario.username == username))
         return result.scalar_one_or_none()
 
+    async def get_by_id(self, usuario_id: int) -> Usuario | None:
+        result = await self.db.execute(select(Usuario).where(Usuario.id == usuario_id))
+        return result.scalar_one_or_none()
+
     async def get_by_email(self, email: str) -> Usuario | None:
         result = await self.db.execute(select(Usuario).where(Usuario.email == email))
         return result.scalar_one_or_none()

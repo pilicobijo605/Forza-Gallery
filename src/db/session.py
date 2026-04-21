@@ -20,6 +20,7 @@ async def init_db():
     from src.models import usuario, imagen, tag  # noqa: F401
     from src.models import like, guardado, comentario, reaccion  # noqa: F401
     from src.models import seguidor, favorito_usuario  # noqa: F401
+    from src.models import notificacion, conversacion, mensaje  # noqa: F401
     from src.models.usuario import Usuario
     from src.core.security import hash_password
     from sqlalchemy import select
@@ -42,6 +43,51 @@ async def init_db():
                     seguido_id  INTEGER NOT NULL REFERENCES usuarios(id) ON DELETE CASCADE,
                     created_at  TIMESTAMPTZ NOT NULL DEFAULT NOW(),
                     PRIMARY KEY (seguidor_id, seguido_id)
+                )
+            """))
+        except Exception:
+            pass
+        try:
+            await conn.execute(text("""
+                CREATE TABLE IF NOT EXISTS notificaciones (
+                    id SERIAL PRIMARY KEY,
+                    usuario_id INTEGER NOT NULL REFERENCES usuarios(id) ON DELETE CASCADE,
+                    tipo VARCHAR(50) NOT NULL,
+                    from_username VARCHAR(50),
+                    imagen_id INTEGER REFERENCES imagenes(id) ON DELETE SET NULL,
+                    leida BOOLEAN NOT NULL DEFAULT FALSE,
+                    created_at TIMESTAMPTZ NOT NULL DEFAULT NOW()
+                )
+            """))
+        except Exception:
+            pass
+        try:
+            await conn.execute(text("""
+                CREATE TABLE IF NOT EXISTS conversaciones (
+                    id SERIAL PRIMARY KEY,
+                    user1_id INTEGER NOT NULL REFERENCES usuarios(id) ON DELETE CASCADE,
+                    user2_id INTEGER NOT NULL REFERENCES usuarios(id) ON DELETE CASCADE,
+                    created_at TIMESTAMPTZ NOT NULL DEFAULT NOW()
+                )
+            """))
+        except Exception:
+            pass
+        try:
+            await conn.execute(text("""
+                CREATE UNIQUE INDEX IF NOT EXISTS conv_unique
+                ON conversaciones (LEAST(user1_id, user2_id), GREATEST(user1_id, user2_id))
+            """))
+        except Exception:
+            pass
+        try:
+            await conn.execute(text("""
+                CREATE TABLE IF NOT EXISTS mensajes (
+                    id SERIAL PRIMARY KEY,
+                    conversacion_id INTEGER NOT NULL REFERENCES conversaciones(id) ON DELETE CASCADE,
+                    autor_id INTEGER NOT NULL REFERENCES usuarios(id) ON DELETE CASCADE,
+                    contenido TEXT NOT NULL,
+                    leido BOOLEAN NOT NULL DEFAULT FALSE,
+                    created_at TIMESTAMPTZ NOT NULL DEFAULT NOW()
                 )
             """))
         except Exception:

@@ -4,7 +4,7 @@
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
   <title>Galería — Forza Gallery</title>
-  <link rel="stylesheet" href="/css/style.css?v=5" />
+  <link rel="stylesheet" href="/css/style.css?v=6" />
 </head>
 <body>
 
@@ -47,7 +47,6 @@
     <div class="lb-panel">
       <div class="lb-header">
         <div class="lb-title-bar" id="lb-title"></div>
-        <button class="lb-edit-toggle" id="lb-edit-toggle" style="display:none" title="Editar">✏️</button>
         <button class="lb-date" id="lb-date"></button>
       </div>
       <div class="lb-img-wrap">
@@ -71,6 +70,7 @@
             <button class="lb-action-btn" id="lb-comment-btn" title="Comentarios">
               <span class="lb-action-icon">💬</span><span id="lb-comment-count">0</span>
             </button>
+            <button class="lb-action-btn" id="lb-edit-toggle" style="display:none" title="Editar">✏️</button>
             <span class="lb-action-stat" title="Visitas">
               <span class="lb-action-icon">👁</span><span id="lb-views-count">0</span>
             </span>
@@ -298,7 +298,7 @@
           <div class="lb-comment-item" data-id="${c.id}">
             <div class="lb-comment-body">
               <div class="lb-comment-header">
-                <span class="lb-comment-author">${c.username}</span>
+                <a class="lb-comment-author" href="/perfil.html?u=${c.username}">${c.username}</a>
                 <span class="lb-comment-time">${timeAgo(c.created_at)}</span>
               </div>
               <span class="lb-comment-text">${c.contenido.replace(/</g,"&lt;")}</span>

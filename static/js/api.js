@@ -215,17 +215,61 @@ function requireAuth(redirectTo = "/login.html") {
   }
 }
 
+async function getNotificaciones() {
+  return apiFetch("/notificaciones");
+}
+async function countNotifNoLeidas() {
+  return apiFetch("/notificaciones/no-leidas");
+}
+async function leerTodasNotificaciones() {
+  return apiFetch("/notificaciones/leer-todas", { method: "POST" });
+}
+async function getConversaciones() {
+  return apiFetch("/mensajes/conversaciones");
+}
+async function getMensajes(username) {
+  return apiFetch(`/mensajes/${username}`);
+}
+async function enviarMensaje(username, contenido) {
+  return apiFetch(`/mensajes/${username}`, {
+    method: "POST",
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify({ contenido }),
+  });
+}
+async function getMensajesNoLeidos() {
+  return apiFetch("/mensajes/no-leidos");
+}
+
 function updateNavAuth() {
   const navAuth = document.getElementById("nav-auth");
   if (!navAuth) return;
   if (isLoggedIn()) {
     fetchMe().then(me => {
       navAuth.innerHTML = `
-        <a href="/perfil.html?u=${me.username}" class="nav-avatar-link" title="Mi perfil">
-          <img src="/img/default-avatar.svg" alt="Perfil" class="nav-avatar" id="nav-avatar-img" />
-        </a>
-        <a href="/subir.html">Subir</a>
-        <a href="#" id="btn-logout">Cerrar sesión</a>
+        <li class="nav-msg-wrap">
+          <a href="/mensajes.html" class="nav-msg-btn" title="Mensajes">
+            <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z"/></svg>
+          </a>
+          <span class="nav-msg-badge" id="nav-msg-badge" style="display:none"></span>
+        </li>
+        <li class="nav-bell-wrap">
+          <button class="nav-bell-btn" id="nav-bell-btn" title="Notificaciones">
+            <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M18 8A6 6 0 0 0 6 8c0 7-3 9-3 9h18s-3-2-3-9"/><path d="M13.73 21a2 2 0 0 1-3.46 0"/></svg>
+            <span class="nav-bell-badge" id="nav-bell-badge" style="display:none"></span>
+          </button>
+          <div class="nav-bell-dropdown" id="nav-bell-dropdown">
+            <div class="nav-bell-header">Notificaciones</div>
+            <div id="nav-bell-list"><div class="notif-empty">Cargando...</div></div>
+          </div>
+        </li>
+        <li>
+          <a href="/perfil.html?u=${me.username}" class="nav-avatar-link" title="Mi perfil">
+            <img src="/img/default-avatar.svg" alt="Perfil" class="nav-avatar" id="nav-avatar-img" />
+          </a>
+        </li>
+        <li><a href="/subir.html">Subir</a></li>
+        <li><a href="#" id="btn-logout">Cerrar sesión</a></li>
       `;
       apiFetch(`/usuarios/${me.username}`).then(perfil => {
         if (perfil.avatar_url) document.getElementById("nav-avatar-img").src = perfil.avatar_url;
@@ -233,10 +277,13 @@ function updateNavAuth() {
       document.getElementById("btn-logout")?.addEventListener("click", (e) => {
         e.preventDefault(); clearToken(); window.location.href = "/index.html";
       });
+
+      _initNavBell();
+      _initNavMsgBadge();
     }).catch(() => {
       navAuth.innerHTML = `
-        <a href="/subir.html">Subir</a>
-        <a href="#" id="btn-logout">Cerrar sesión</a>
+        <li><a href="/subir.html">Subir</a></li>
+        <li><a href="#" id="btn-logout">Cerrar sesión</a></li>
       `;
       document.getElementById("btn-logout")?.addEventListener("click", (e) => {
         e.preventDefault(); clearToken(); window.location.href = "/index.html";
@@ -245,8 +292,73 @@ function updateNavAuth() {
     return;
   } else {
     navAuth.innerHTML = `
-      <a href="/login.html">Login</a>
-      <a href="/registro.html" class="nav-cta">Registro</a>
+      <li><a href="/login.html">Login</a></li>
+      <li><a href="/registro.html" class="nav-cta">Registro</a></li>
     `;
   }
+}
+
+function _initNavMsgBadge() {
+  getMensajesNoLeidos().then(d => {
+    const badge = document.getElementById("nav-msg-badge");
+    if (!badge) return;
+    if (d.count > 0) {
+      badge.textContent = d.count > 9 ? "9+" : d.count;
+      badge.style.display = "flex";
+    }
+  }).catch(() => {});
+}
+
+function _initNavBell() {
+  const bellBtn = document.getElementById("nav-bell-btn");
+  const dropdown = document.getElementById("nav-bell-dropdown");
+  const badge = document.getElementById("nav-bell-badge");
+  if (!bellBtn) return;
+
+  countNotifNoLeidas().then(d => {
+    if (d.count > 0) {
+      badge.textContent = d.count > 9 ? "9+" : d.count;
+      badge.style.display = "flex";
+    }
+  }).catch(() => {});
+
+  bellBtn.addEventListener("click", (e) => {
+    e.stopPropagation();
+    const open = dropdown.classList.toggle("open");
+    if (open) {
+      badge.style.display = "none";
+      leerTodasNotificaciones().catch(() => {});
+      getNotificaciones().then(notifs => {
+        const list = document.getElementById("nav-bell-list");
+        if (!notifs.length) { list.innerHTML = '<div class="notif-empty">Sin notificaciones</div>'; return; }
+        list.innerHTML = notifs.map(n => {
+          const texto = n.tipo === "like"
+            ? `<strong>${n.from_username}</strong> ha dado like a tu foto`
+            : n.tipo;
+          const href = n.imagen_id ? `/galeria.html?id=${n.imagen_id}` : "#";
+          return `<a class="notif-item ${n.leida ? "" : "unread"}" href="${href}">
+            <img class="notif-avatar" src="/img/default-avatar.svg" alt="" onerror="this.src='/img/default-avatar.svg'" />
+            <div>
+              <div class="notif-text">${texto}</div>
+              <div class="notif-time">${timeAgo(n.created_at)}</div>
+            </div>
+          </a>`;
+        }).join("");
+        notifs.forEach((n, i) => {
+          if (n.from_username) {
+            apiFetch(`/usuarios/${n.from_username}`).then(p => {
+              const imgs = document.querySelectorAll(".notif-avatar");
+              if (imgs[i] && p.avatar_url) imgs[i].src = p.avatar_url;
+            }).catch(() => {});
+          }
+        });
+      }).catch(() => {});
+    }
+  });
+
+  document.addEventListener("click", (e) => {
+    if (!dropdown.contains(e.target) && e.target !== bellBtn) {
+      dropdown.classList.remove("open");
+    }
+  });
 }
