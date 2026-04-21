@@ -19,17 +19,12 @@
     <div class="page-header">
       <div class="page-header-top">
         <h1 class="page-title">Galería</h1>
-        <span class="page-count" id="count-label"></span>
+        <div style="display:flex;align-items:center;gap:0.75rem;">
+          <span class="page-count" id="count-label"></span>
+          <button class="filter-btn" id="trending-toggle-btn" title="Ver trending">🔥 Trending</button>
+        </div>
       </div>
     </div>
-
-    <section id="trending-section" style="display:none">
-      <div class="trending-section">
-        <h2 class="trending-title">🔥 <span>Trending</span></h2>
-        <div class="trending-grid" id="trending-grid"></div>
-      </div>
-      <div class="teal-divider" style="margin-bottom:1rem"></div>
-    </section>
 
     <div class="search-bar">
       <input type="search" class="search-input" id="gallery-search" placeholder="🔍  Buscar por título o descripción..." autocomplete="off" />
@@ -73,6 +68,12 @@
 
     <div class="gallery-grid" id="gallery"></div>
     <div class="gallery-sentinel" id="gallery-sentinel"></div>
+
+    <div id="trending-panel" style="display:none">
+      <div class="trending-section">
+        <div class="trending-grid" id="trending-grid"></div>
+      </div>
+    </div>
   </main>
 
   <div class="lightbox" id="lightbox">
@@ -821,11 +822,18 @@
       loadGallery();
     });
 
+    let _trendingLoaded = false;
+    let _trendingVisible = false;
+
     async function loadTrending() {
+      if (_trendingLoaded) return;
       try {
-        const imgs = await fetchTrending(6);
-        if (!imgs.length) return;
-        document.getElementById("trending-section").style.display = "block";
+        const imgs = await fetchTrending(12);
+        _trendingLoaded = true;
+        if (!imgs.length) {
+          document.getElementById("trending-panel").innerHTML = '<div class="state-box"><span class="state-icon">🏎</span><p>Sin datos de trending aún.</p></div>';
+          return;
+        }
         document.getElementById("trending-grid").innerHTML = imgs.map(img => `
           <a href="/galeria.html?id=${img.id}" class="img-card" style="display:block;aspect-ratio:4/3;text-decoration:none;">
             <img class="img-thumb" src="${img.filename}" alt="${img.titulo}" loading="lazy" onerror="this.style.display='none'">
@@ -837,7 +845,41 @@
         `).join("");
       } catch {}
     }
-    loadTrending();
+
+    document.getElementById("trending-toggle-btn").addEventListener("click", async () => {
+      const btn     = document.getElementById("trending-toggle-btn");
+      const panel   = document.getElementById("trending-panel");
+      const gallery = document.getElementById("gallery");
+      const sentinel = document.getElementById("gallery-sentinel");
+      const search  = document.querySelector(".search-bar");
+      const filters = document.querySelector(".filter-bar");
+      const tagBar  = document.getElementById("tag-filter-bar");
+
+      _trendingVisible = !_trendingVisible;
+
+      if (_trendingVisible) {
+        btn.classList.add("active");
+        btn.textContent = "← Galería";
+        panel.style.display = "block";
+        gallery.style.display = "none";
+        sentinel.style.display = "none";
+        search.style.display = "none";
+        filters.style.display = "none";
+        tagBar.style.display = "none";
+        document.getElementById("count-label").style.display = "none";
+        await loadTrending();
+      } else {
+        btn.classList.remove("active");
+        btn.textContent = "🔥 Trending";
+        panel.style.display = "none";
+        gallery.style.display = "";
+        sentinel.style.display = "";
+        search.style.display = "";
+        filters.style.display = "";
+        document.getElementById("count-label").style.display = "";
+        updateFilterBar();
+      }
+    });
 
     let _searchTimer = null;
     document.getElementById("gallery-search").addEventListener("input", (e) => {

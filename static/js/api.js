@@ -462,7 +462,10 @@ function _initHamburger(me) {
     document.body.style.overflow = "";
   }
 
-  hamBtn.addEventListener("click", openDrawer);
+  hamBtn.addEventListener("click", () => {
+    if (drawer.classList.contains("open")) closeDrawer();
+    else openDrawer();
+  });
   overlay.addEventListener("click", closeDrawer);
   drawer.querySelector(".nav-drawer-close-btn").addEventListener("click", closeDrawer);
   drawer.querySelectorAll("a").forEach(a => a.addEventListener("click", closeDrawer));
