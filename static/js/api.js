@@ -319,12 +319,19 @@ function _initNavBell() {
   const badge = document.getElementById("nav-bell-badge");
   if (!bellBtn) return;
 
-  countNotifNoLeidas().then(d => {
-    if (d.count > 0) {
-      badge.textContent = d.count > 9 ? "9+" : d.count;
-      badge.style.display = "flex";
-    }
-  }).catch(() => {});
+  function _refreshBadge() {
+    countNotifNoLeidas().then(d => {
+      if (!document.getElementById("nav-bell-badge")) return;
+      if (d.count > 0) {
+        badge.textContent = d.count > 9 ? "9+" : d.count;
+        badge.style.display = "flex";
+      } else if (!dropdown.classList.contains("open")) {
+        badge.style.display = "none";
+      }
+    }).catch(() => {});
+  }
+  _refreshBadge();
+  setInterval(_refreshBadge, 30000);
 
   bellBtn.addEventListener("click", (e) => {
     e.stopPropagation();

@@ -4,7 +4,7 @@
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
   <title>Galería — Forza Gallery</title>
-  <link rel="stylesheet" href="/css/style.css?v=7" />
+  <link rel="stylesheet" href="/css/style.css?v=8" />
 </head>
 <body>
 
@@ -30,6 +30,24 @@
       <button class="filter-btn" data-juego="FH3">FH3</button>
       <button class="filter-btn" data-juego="FH4">FH4</button>
       <button class="filter-btn" data-juego="FH5">FH5</button>
+      <div class="filter-divider"></div>
+      <div class="filter-dropdown-wrap">
+        <button class="filter-btn filter-dropdown-btn" id="period-btn">📅 Período ▾</button>
+        <div class="filter-dropdown-menu" id="period-menu">
+          <button class="filter-drop-item active" data-period="">Todos</button>
+          <button class="filter-drop-item" data-period="week">Esta semana</button>
+          <button class="filter-drop-item" data-period="month">Este mes</button>
+          <button class="filter-drop-item" data-period="year">Este año</button>
+        </div>
+      </div>
+      <div class="filter-dropdown-wrap">
+        <button class="filter-btn filter-dropdown-btn" id="orden-btn">↕ Recientes ▾</button>
+        <div class="filter-dropdown-menu" id="orden-menu">
+          <button class="filter-drop-item active" data-orden="recientes">Más recientes</button>
+          <button class="filter-drop-item" data-orden="antiguos">Más antiguos</button>
+          <button class="filter-drop-item" data-orden="visitados">Más visitados</button>
+        </div>
+      </div>
     </div>
 
     <div class="tag-filter-bar" id="tag-filter-bar" style="display:none">
@@ -132,16 +150,31 @@
   <div class="teal-divider" style="margin-top:auto"></div>
   <footer class="footer">Forza Gallery &nbsp;·&nbsp; Comunidad Forza Horizon</footer>
 
-  <script src="/js/api.js?v=3"></script>
+  <script src="/js/api.js?v=4"></script>
   <script src="/js/toast.js"></script>
   <script>
     updateNavAuth();
 
     const _params    = new URLSearchParams(location.search);
-    let currentJuego = _params.get("juego") || "";
-    let currentTag   = _params.get("tag") || "";
-    let currentFecha = _params.get("fecha") || "";
-    let currentUser  = null;
+    let currentJuego  = _params.get("juego") || "";
+    let currentTag    = _params.get("tag") || "";
+    let currentFecha  = _params.get("fecha") || "";
+    let currentPeriodo = "";
+    let currentOrden  = "recientes";
+    let currentUser   = null;
+
+    // Add year buttons dynamically
+    (function() {
+      const menu = document.getElementById("period-menu");
+      const year = new Date().getFullYear();
+      for (let y = year; y >= 2024; y--) {
+        const btn = document.createElement("button");
+        btn.className = "filter-drop-item";
+        btn.dataset.period = String(y);
+        btn.textContent = String(y);
+        menu.appendChild(btn);
+      }
+    })();
 
     async function loadUser() {
       if (isLoggedIn()) {
@@ -153,39 +186,105 @@
       return new Date(iso).toLocaleDateString("es-ES", { day:"2-digit", month:"short", year:"numeric" });
     }
 
-    function setTagFilter(tag) {
-      currentTag = tag;
+    function updateFilterBar() {
       const bar   = document.getElementById("tag-filter-bar");
       const label = document.getElementById("tag-filter-text");
-      if (tag) {
+      if (currentTag) {
         bar.style.display = "flex";
-        label.textContent = `#${tag}`;
+        label.textContent = `#${currentTag}`;
+      } else if (currentFecha) {
+        bar.style.display = "flex";
+        label.textContent = `📅 ${currentFecha}`;
       } else {
         bar.style.display = "none";
       }
+    }
+
+    function updatePeriodBtn() {
+      const labels = { "": "Período", week: "Esta semana", month: "Este mes", year: "Este año" };
+      const label = labels[currentPeriodo] ?? currentPeriodo;
+      const btn = document.getElementById("period-btn");
+      btn.textContent = `📅 ${label} ▾`;
+      btn.classList.toggle("active", !!(currentPeriodo || currentFecha));
+      document.querySelectorAll("#period-menu .filter-drop-item").forEach(item =>
+        item.classList.toggle("active", item.dataset.period === currentPeriodo)
+      );
+    }
+
+    function updateOrdenBtn() {
+      const labels = { recientes: "Recientes", antiguos: "Más antiguos", visitados: "Más visitados" };
+      document.getElementById("orden-btn").textContent = `↕ ${labels[currentOrden] || "Recientes"} ▾`;
+      document.getElementById("orden-btn").classList.toggle("active", currentOrden !== "recientes");
+      document.querySelectorAll("#orden-menu .filter-drop-item").forEach(item =>
+        item.classList.toggle("active", item.dataset.orden === currentOrden)
+      );
+    }
+
+    function setTagFilter(tag) {
+      currentTag = tag;
+      updateFilterBar();
       loadGallery();
+    }
+
+    function setDateFilter(fecha) {
+      currentFecha = fecha;
+      currentPeriodo = "";
+      updateFilterBar();
+      updatePeriodBtn();
+      loadGallery();
+    }
+
+    function setPeriodo(periodo) {
+      currentPeriodo = periodo;
+      currentFecha = "";
+      updateFilterBar();
+      updatePeriodBtn();
+      loadGallery();
+    }
+
+    function setOrden(orden) {
+      currentOrden = orden;
+      updateOrdenBtn();
+      loadGallery();
+    }
+
+    function applyPeriodoFilter(imagenes) {
+      if (!currentPeriodo) return imagenes;
+      const now = new Date();
+      return imagenes.filter(img => {
+        const d = new Date(img.created_at);
+        if (currentPeriodo === "week") {
+          const ago = new Date(now); ago.setDate(now.getDate() - 7);
+          return d >= ago;
+        }
+        if (currentPeriodo === "month")
+          return d.getFullYear() === now.getFullYear() && d.getMonth() === now.getMonth();
+        if (currentPeriodo === "year")
+          return d.getFullYear() === now.getFullYear();
+        return d.getFullYear() === parseInt(currentPeriodo);
+      });
+    }
+
+    function applyOrden(imagenes) {
+      const s = [...imagenes];
+      if (currentOrden === "antiguos")  s.sort((a,b) => new Date(a.created_at) - new Date(b.created_at));
+      else if (currentOrden === "visitados") s.sort((a,b) => (b.visitas||0) - (a.visitas||0));
+      else s.sort((a,b) => new Date(b.created_at) - new Date(a.created_at));
+      return s;
     }
 
     document.getElementById("tag-filter-clear").addEventListener("click", () => {
       history.replaceState(null, "", location.pathname);
-      setTagFilter("");
+      currentTag = "";
+      currentFecha = "";
+      currentPeriodo = "";
+      updateFilterBar();
+      updatePeriodBtn();
+      loadGallery();
     });
 
-    function setDateFilter(fecha) {
-      currentFecha = fecha;
-      const bar = document.getElementById("tag-filter-bar");
-      const label = document.getElementById("tag-filter-text");
-      if (fecha) {
-        bar.style.display = "flex";
-        label.textContent = `📅 ${fecha}`;
-      } else if (!currentTag) {
-        bar.style.display = "none";
-      }
-      loadGallery();
-    }
-
-    if (currentTag) setTagFilter(currentTag);
-    if (currentFecha) setDateFilter(currentFecha);
+    if (currentTag) { updateFilterBar(); }
+    if (currentFecha) { updateFilterBar(); updatePeriodBtn(); }
 
     function renderSkeletons() {
       const grid = document.getElementById("gallery");
@@ -434,11 +533,13 @@
     async function loadGallery() {
       renderSkeletons();
       try {
-        const params = new URLSearchParams({ skip: 0, limit: 60 });
+        const params = new URLSearchParams({ skip: 0, limit: 100 });
         if (currentJuego) params.set("juego", currentJuego);
         if (currentTag)   params.set("tag",   currentTag);
         if (currentFecha) params.set("fecha", currentFecha);
-        const imagenes = await apiFetch(`/imagenes?${params}`);
+        let imagenes = await apiFetch(`/imagenes?${params}`);
+        imagenes = applyPeriodoFilter(imagenes);
+        imagenes = applyOrden(imagenes);
 
         const grid = document.getElementById("gallery");
         document.getElementById("count-label").textContent =
@@ -503,9 +604,9 @@
       }
     }
 
-    document.querySelectorAll(".filter-btn").forEach(btn => {
+    document.querySelectorAll(".filter-btn[data-juego]").forEach(btn => {
       btn.addEventListener("click", () => {
-        document.querySelectorAll(".filter-btn").forEach(b => b.classList.remove("active"));
+        document.querySelectorAll(".filter-btn[data-juego]").forEach(b => b.classList.remove("active"));
         btn.classList.add("active");
         currentJuego = btn.dataset.juego;
         loadGallery();
@@ -513,10 +614,45 @@
     });
 
     if (currentJuego) {
-      document.querySelectorAll(".filter-btn").forEach(b => {
+      document.querySelectorAll(".filter-btn[data-juego]").forEach(b => {
         b.classList.toggle("active", b.dataset.juego === currentJuego);
       });
     }
+
+    // Period dropdown
+    const periodBtn  = document.getElementById("period-btn");
+    const periodMenu = document.getElementById("period-menu");
+    periodBtn.addEventListener("click", (e) => {
+      e.stopPropagation();
+      periodMenu.classList.toggle("open");
+      document.getElementById("orden-menu").classList.remove("open");
+    });
+    periodMenu.addEventListener("click", (e) => {
+      const item = e.target.closest(".filter-drop-item");
+      if (!item) return;
+      periodMenu.classList.remove("open");
+      setPeriodo(item.dataset.period);
+    });
+
+    // Order dropdown
+    const ordenBtn  = document.getElementById("orden-btn");
+    const ordenMenu = document.getElementById("orden-menu");
+    ordenBtn.addEventListener("click", (e) => {
+      e.stopPropagation();
+      ordenMenu.classList.toggle("open");
+      periodMenu.classList.remove("open");
+    });
+    ordenMenu.addEventListener("click", (e) => {
+      const item = e.target.closest(".filter-drop-item");
+      if (!item) return;
+      ordenMenu.classList.remove("open");
+      setOrden(item.dataset.orden);
+    });
+
+    document.addEventListener("click", () => {
+      periodMenu.classList.remove("open");
+      ordenMenu.classList.remove("open");
+    });
 
     document.getElementById("lb-edit-toggle").addEventListener("click", () => {
       const form    = document.getElementById("lb-edit-form");
