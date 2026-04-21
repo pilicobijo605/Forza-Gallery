@@ -1,0 +1,17 @@
+{
+  "name": "Forza Gallery",
+  "short_name": "ForzaGallery",
+  "description": "Comparte tus mejores capturas de Forza Horizon",
+  "start_url": "/",
+  "display": "standalone",
+  "background_color": "#080808",
+  "theme_color": "#EC377C",
+  "icons": [
+    {
+      "src": "/img/default-avatar.svg",
+      "sizes": "any",
+      "type": "image/svg+xml",
+      "purpose": "any maskable"
+    }
+  ]
+}

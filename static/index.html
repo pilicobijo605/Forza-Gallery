@@ -3,8 +3,10 @@
 <head>
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <meta name="theme-color" content="#EC377C" />
   <title>Forza Gallery — Comparte tu Forza Horizon</title>
-  <link rel="stylesheet" href="/css/style.css?v=9" />
+  <link rel="stylesheet" href="/css/style.css?v=10" />
+  <link rel="manifest" href="/manifest.json" />
 </head>
 <body>
 
@@ -66,11 +68,19 @@
 
   <div class="teal-divider"></div>
 
+  <section id="trending-section" style="display:none">
+    <div class="trending-section">
+      <h2 class="trending-title">🔥 <span>Trending</span> ahora</h2>
+      <div class="trending-grid" id="trending-grid"></div>
+    </div>
+    <div class="teal-divider"></div>
+  </section>
+
   <footer class="footer">
     Forza Gallery &nbsp;·&nbsp; Comunidad Forza Horizon
   </footer>
 
-  <script src="/js/api.js?v=5"></script>
+  <script src="/js/api.js?v=6"></script>
   <script src="/js/toast.js"></script>
   <script>
     updateNavAuth();
@@ -88,7 +98,25 @@
       }
     }
 
+    async function loadTrending() {
+      try {
+        const imgs = await fetchTrending(6);
+        if (!imgs.length) return;
+        document.getElementById("trending-section").style.display = "block";
+        document.getElementById("trending-grid").innerHTML = imgs.map(img => `
+          <a href="/galeria.html?id=${img.id}" class="img-card" style="display:block;aspect-ratio:4/3;text-decoration:none;">
+            <img class="img-thumb" src="${img.filename}" alt="${img.titulo}" loading="lazy" onerror="this.style.display='none'">
+            <div class="card-overlay" style="opacity:1">
+              <div class="img-title" style="font-size:0.8rem">${img.titulo}</div>
+              <div class="img-meta"><span class="juego-badge ${img.juego}">${img.juego}</span></div>
+            </div>
+          </a>
+        `).join("");
+      } catch {}
+    }
+
     loadStats();
+    loadTrending();
   </script>
 </body>
 </html>

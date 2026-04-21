@@ -1,5 +1,5 @@
-from datetime import datetime, timezone
-from sqlalchemy import select
+from datetime import datetime, timedelta, timezone
+from sqlalchemy import or_, select
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from src.models.imagen import Imagen
@@ -16,6 +16,7 @@ class ImagenRepository:
         tag: str | None = None,
         fecha: str | None = None,
         usuario: str | None = None,
+        q: str | None = None,
         skip: int = 0,
         limit: int = 20,
     ) -> list[Imagen]:
@@ -37,6 +38,21 @@ class ImagenRepository:
             start = datetime(d.year, d.month, d.day, 0, 0, 0, tzinfo=timezone.utc)
             end   = datetime(d.year, d.month, d.day, 23, 59, 59, tzinfo=timezone.utc)
             query = query.where(Imagen.created_at.between(start, end))
+        if q:
+            query = query.where(
+                or_(Imagen.titulo.ilike(f"%{q}%"), Imagen.descripcion.ilike(f"%{q}%"))
+            )
+        result = await self.db.execute(query)
+        return list(result.scalars().all())
+
+    async def get_trending(self, limit: int = 10) -> list[Imagen]:
+        cutoff = datetime.now(timezone.utc) - timedelta(days=30)
+        query = (
+            select(Imagen)
+            .where(Imagen.created_at >= cutoff)
+            .order_by(Imagen.visitas.desc())
+            .limit(limit)
+        )
         result = await self.db.execute(query)
         return list(result.scalars().all())
 

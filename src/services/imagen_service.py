@@ -35,12 +35,18 @@ async def list_imagenes(
     tag: str | None,
     fecha: str | None,
     usuario: str | None,
+    q: str | None,
     skip: int,
     limit: int,
 ) -> list[ImagenOut]:
     repo = ImagenRepository(db)
     tag_norm = tag.lower() if tag else None
-    return [ImagenOut.model_validate(i) for i in await repo.get_all(juego, tag_norm, fecha, usuario, skip, limit)]
+    return [ImagenOut.model_validate(i) for i in await repo.get_all(juego, tag_norm, fecha, usuario, q, skip, limit)]
+
+
+async def get_trending(db: AsyncSession, limit: int = 10) -> list[ImagenOut]:
+    repo = ImagenRepository(db)
+    return [ImagenOut.model_validate(i) for i in await repo.get_trending(limit)]
 
 
 async def get_imagen(db: AsyncSession, imagen_id: int) -> ImagenOut:
@@ -73,6 +79,8 @@ async def upload_imagen(
         content,
         folder="forzagram",
         resource_type="image",
+        quality="auto",
+        fetch_format="auto",
     )
     image_url = result["secure_url"]
 

@@ -241,6 +241,21 @@ async function getMensajesNoLeidos() {
   return apiFetch("/mensajes/no-leidos");
 }
 
+if ("serviceWorker" in navigator) {
+  navigator.serviceWorker.register("/sw.js").catch(() => {});
+}
+
+async function fetchTrending(limit = 10) {
+  return apiFetch(`/imagenes/trending?limit=${limit}`);
+}
+
+async function searchImagenes(q, juego = null, skip = 0, limit = 20) {
+  const params = new URLSearchParams({ skip, limit });
+  if (q) params.set("q", q);
+  if (juego) params.set("juego", juego);
+  return apiFetch(`/imagenes?${params}`);
+}
+
 let _currentUsername = null;
 
 function updateNavAuth() {
@@ -289,12 +304,14 @@ function updateNavAuth() {
       _initNavMsgBadge();
       _initChatWidget();
       _initNavUserMenu();
+      _initHamburger(me);
     }).catch(() => {
       clearToken();
       navAuth.innerHTML = `
         <li><a href="/login.html">Login</a></li>
         <li><a href="/registro.html" class="nav-cta">Registro</a></li>
       `;
+      _initHamburger(null);
     });
     return;
   } else {
@@ -302,6 +319,7 @@ function updateNavAuth() {
       <li><a href="/login.html">Login</a></li>
       <li><a href="/registro.html" class="nav-cta">Registro</a></li>
     `;
+    _initHamburger(null);
   }
 }
 
@@ -375,6 +393,72 @@ function _initNavBell() {
       dropdown.classList.remove("open");
     }
   });
+}
+
+function _initHamburger(me) {
+  const navbar = document.querySelector(".navbar");
+  if (!navbar) return;
+
+  document.getElementById("nav-hamburger")?.remove();
+  document.getElementById("nav-overlay")?.remove();
+  document.getElementById("nav-drawer")?.remove();
+
+  const hamBtn = document.createElement("button");
+  hamBtn.id = "nav-hamburger";
+  hamBtn.className = "nav-hamburger";
+  hamBtn.setAttribute("aria-label", "Menú");
+  hamBtn.innerHTML = "<span></span><span></span><span></span>";
+  navbar.appendChild(hamBtn);
+
+  const overlay = document.createElement("div");
+  overlay.id = "nav-overlay";
+  overlay.className = "nav-overlay";
+  document.body.appendChild(overlay);
+
+  const drawer = document.createElement("div");
+  drawer.id = "nav-drawer";
+  drawer.className = "nav-drawer";
+
+  if (me) {
+    drawer.innerHTML = `
+      <ul class="nav-drawer-links">
+        <li><a href="/galeria.html">Galería</a></li>
+        <li><a href="/mensajes.html">Mensajes</a></li>
+        <li><a href="/perfil.html?u=${me.username}">Mi perfil</a></li>
+        <li><a href="/subir.html">Subir foto</a></li>
+        <div class="nav-drawer-divider"></div>
+        <li><button class="nav-drawer-danger" id="drawer-logout">Cerrar sesión</button></li>
+      </ul>`;
+    drawer.querySelector("#drawer-logout").addEventListener("click", () => {
+      clearToken(); window.location.href = "/index.html";
+    });
+  } else {
+    drawer.innerHTML = `
+      <ul class="nav-drawer-links">
+        <li><a href="/galeria.html">Galería</a></li>
+        <li><a href="/login.html">Login</a></li>
+        <li><a href="/registro.html" class="nav-cta">Registro</a></li>
+      </ul>`;
+  }
+
+  document.body.appendChild(drawer);
+
+  function openDrawer() {
+    hamBtn.classList.add("open");
+    overlay.classList.add("open");
+    drawer.classList.add("open");
+    document.body.style.overflow = "hidden";
+  }
+  function closeDrawer() {
+    hamBtn.classList.remove("open");
+    overlay.classList.remove("open");
+    drawer.classList.remove("open");
+    document.body.style.overflow = "";
+  }
+
+  hamBtn.addEventListener("click", openDrawer);
+  overlay.addEventListener("click", closeDrawer);
+  drawer.querySelectorAll("a").forEach(a => a.addEventListener("click", closeDrawer));
 }
 
 function _initNavUserMenu() {

@@ -4,7 +4,7 @@
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
   <title>Galería — Forza Gallery</title>
-  <link rel="stylesheet" href="/css/style.css?v=9" />
+  <link rel="stylesheet" href="/css/style.css?v=10" />
 </head>
 <body>
 
@@ -21,6 +21,10 @@
         <h1 class="page-title">Galería</h1>
         <span class="page-count" id="count-label"></span>
       </div>
+    </div>
+
+    <div class="search-bar">
+      <input type="search" class="search-input" id="gallery-search" placeholder="🔍  Buscar por título o descripción..." autocomplete="off" />
     </div>
 
     <div class="filter-bar">
@@ -60,6 +64,7 @@
     </div>
 
     <div class="gallery-grid" id="gallery"></div>
+    <div class="gallery-sentinel" id="gallery-sentinel"></div>
   </main>
 
   <div class="lightbox" id="lightbox">
@@ -152,7 +157,7 @@
   <div class="teal-divider" style="margin-top:auto"></div>
   <footer class="footer">Forza Gallery &nbsp;·&nbsp; Comunidad Forza Horizon</footer>
 
-  <script src="/js/api.js?v=5"></script>
+  <script src="/js/api.js?v=6"></script>
   <script src="/js/toast.js"></script>
   <script>
     updateNavAuth();
@@ -165,6 +170,10 @@
     let currentOrden    = "recientes";
     let currentMisFotos = false;
     let currentUser     = null;
+    let currentSearch   = "";
+    let _allImages      = [];
+    let _renderedCount  = 0;
+    const PAGE_SIZE     = 20;
 
     // Add year buttons dynamically
     (function() {
@@ -538,6 +547,79 @@
       }
     }
 
+    function cardHtml(img, i) {
+      return `
+        <div class="img-card fade-in" style="animation-delay:${i * 0.04}s" data-id="${img.id}">
+          <img class="img-thumb" src="${img.filename}" alt="${img.titulo}" loading="lazy"
+            onerror="this.style.display='none'">
+          ${currentUser && currentUser.id === img.usuario_id
+            ? `<button class="img-delete-btn" data-id="${img.id}" title="Eliminar">🗑</button>`
+            : ""}
+          <div class="card-overlay">
+            <div class="img-meta">
+              <span class="juego-badge ${img.juego}">${img.juego}</span>
+            </div>
+            <div class="img-title">${img.titulo}</div>
+            <div class="img-bottom-row">
+              <div class="tags-row">${tagsHtml(img.tags)}</div>
+              <span class="img-date">${formatDate(img.created_at)}</span>
+            </div>
+          </div>
+        </div>`;
+    }
+
+    function bindCards(elements) {
+      elements.forEach(card => {
+        if (card.dataset.bound) return;
+        card.dataset.bound = "1";
+        card.addEventListener("click", async (e) => {
+          if (e.target.closest(".img-delete-btn") || e.target.closest(".hashtag")) return;
+          try { const img = await fetchImagen(card.dataset.id); openLightbox(img); } catch {}
+        });
+      });
+      elements.forEach(card => {
+        card.querySelectorAll(".hashtag").forEach(el =>
+          el.addEventListener("click", (e) => {
+            e.stopPropagation();
+            history.replaceState(null, "", `?tag=${el.dataset.tag}`);
+            setTagFilter(el.dataset.tag);
+          })
+        );
+        card.querySelector(".img-delete-btn")?.addEventListener("click", (e) => {
+          e.stopPropagation();
+          deleteCard(e.currentTarget.dataset.id);
+        });
+      });
+    }
+
+    function renderPage() {
+      const grid = document.getElementById("gallery");
+      const page = _allImages.slice(_renderedCount, _renderedCount + PAGE_SIZE);
+      if (!page.length) return;
+      const startIdx = _renderedCount;
+      const html = page.map((img, i) => cardHtml(img, startIdx + i)).join("");
+      if (_renderedCount === 0) {
+        grid.innerHTML = html;
+      } else {
+        grid.insertAdjacentHTML("beforeend", html);
+      }
+      _renderedCount += page.length;
+      bindCards([...grid.querySelectorAll(".img-card:not([data-bound])")]);
+    }
+
+    let _observer = null;
+    function setupSentinel() {
+      if (_observer) _observer.disconnect();
+      const sentinel = document.getElementById("gallery-sentinel");
+      if (!sentinel) return;
+      _observer = new IntersectionObserver((entries) => {
+        if (entries[0].isIntersecting && _renderedCount < _allImages.length) {
+          renderPage();
+        }
+      }, { rootMargin: "200px" });
+      _observer.observe(sentinel);
+    }
+
     async function loadGallery() {
       renderSkeletons();
       try {
@@ -548,7 +630,16 @@
         let imagenes = await apiFetch(`/imagenes?${params}`);
         imagenes = applyPeriodoFilter(imagenes);
         imagenes = applyMisFotos(imagenes);
+        if (currentSearch) {
+          const s = currentSearch.toLowerCase();
+          imagenes = imagenes.filter(img =>
+            img.titulo.toLowerCase().includes(s) ||
+            (img.descripcion || "").toLowerCase().includes(s)
+          );
+        }
         imagenes = applyOrden(imagenes);
+        _allImages = imagenes;
+        _renderedCount = 0;
 
         const grid = document.getElementById("gallery");
         document.getElementById("count-label").textContent =
@@ -562,50 +653,9 @@
           return;
         }
 
-        grid.innerHTML = imagenes.map((img, i) => `
-          <div class="img-card fade-in" style="animation-delay:${i * 0.03}s" data-id="${img.id}">
-            <img class="img-thumb" src="${img.filename}" alt="${img.titulo}" loading="lazy"
-              onerror="this.style.display='none'">
-            ${currentUser && currentUser.id === img.usuario_id
-              ? `<button class="img-delete-btn" data-id="${img.id}" title="Eliminar">🗑</button>`
-              : ""}
-            <div class="card-overlay">
-              <div class="img-meta">
-                <span class="juego-badge ${img.juego}">${img.juego}</span>
-              </div>
-              <div class="img-title">${img.titulo}</div>
-              <div class="img-bottom-row">
-                <div class="tags-row">${tagsHtml(img.tags)}</div>
-                <span class="img-date">${formatDate(img.created_at)}</span>
-              </div>
-            </div>
-          </div>
-        `).join("");
-
-        grid.querySelectorAll(".hashtag").forEach(el => {
-          el.addEventListener("click", (e) => {
-            e.stopPropagation();
-            history.replaceState(null, "", `?tag=${el.dataset.tag}`);
-            setTagFilter(el.dataset.tag);
-          });
-        });
-
-        grid.querySelectorAll(".img-card").forEach(card => {
-          card.addEventListener("click", async (e) => {
-            if (e.target.closest(".img-delete-btn") || e.target.closest(".hashtag")) return;
-            try {
-              const img = await fetchImagen(card.dataset.id);
-              openLightbox(img);
-            } catch {}
-          });
-        });
-
-        grid.querySelectorAll(".img-delete-btn").forEach(btn => {
-          btn.addEventListener("click", (e) => {
-            e.stopPropagation();
-            deleteCard(btn.dataset.id);
-          });
-        });
+        grid.innerHTML = "";
+        renderPage();
+        setupSentinel();
 
       } catch(e) {
         document.getElementById("gallery").innerHTML =
@@ -761,6 +811,15 @@
       currentMisFotos = !currentMisFotos;
       document.getElementById("mis-fotos-btn").classList.toggle("active", currentMisFotos);
       loadGallery();
+    });
+
+    let _searchTimer = null;
+    document.getElementById("gallery-search").addEventListener("input", (e) => {
+      clearTimeout(_searchTimer);
+      _searchTimer = setTimeout(() => {
+        currentSearch = e.target.value.trim().toLowerCase();
+        loadGallery();
+      }, 300);
     });
 
     const _openId = _params.get("id");
