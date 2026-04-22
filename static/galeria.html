@@ -5,7 +5,8 @@
   <link rel="icon" href="/favicon.svg" type="image/svg+xml" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
   <title>Galería — Forza Gallery</title>
-  <link rel="stylesheet" href="/css/style.css?v=13" />
+  <link rel="stylesheet" href="/css/style.css?v=14" />
+  <script src="https://cdn.jsdelivr.net/npm/three@0.160.0/build/three.min.js"></script>
 </head>
 <body>
 
@@ -970,25 +971,146 @@
       loadGallery();
     });
 
-    let _trendingLoaded = false;
+    let _trendingLoaded  = false;
     let _trendingVisible = false;
-    let _cfData = [];
-    let _cfIndex = 0;
+    let _cfData    = [];
+    let _cfIndex   = 0;
+    let _cfRenderer  = null;
+    let _cfCamera    = null;
+    let _cfRafId     = null;
+    let _cfMeshes    = [];
+    let _cfTargets   = [];
+    let _cfPaused    = false;
+    let _cfDepartGen = 0;
+    let _cfDepart    = { idx: -1, target: null };
+
+    // Circuit slot positions: road curves right into the distance
+    const CF_SLOTS = [
+      { x:  0,    y: 0.4, z:  0.8,  ry:  0,     sc: 1    },
+      { x:  2.9,  y: 0.4, z: -4.5,  ry: -0.38,  sc: 0.70 },
+      { x:  5.1,  y: 0.4, z: -9.2,  ry: -0.56,  sc: 0.51 },
+      { x:  6.3,  y: 0.4, z: -15,   ry: -0.70,  sc: 0.37 },
+      { x:  6.9,  y: 0.4, z: -21.5, ry: -0.80,  sc: 0.26 },
+      { x: -2.9,  y: 0.4, z: -4.5,  ry:  0.38,  sc: 0.70 },
+      { x: -5.1,  y: 0.4, z: -9.2,  ry:  0.56,  sc: 0.51 },
+    ];
+    const CF_OPS = [1, 0.88, 0.62, 0.42, 0.24, 0.88, 0.62];
+
+    function _cfSlotFor(off) {
+      if (off === 0)              return CF_SLOTS[0];
+      if (off >= 1 && off <= 4)  return CF_SLOTS[off];
+      if (off === -1)             return CF_SLOTS[5];
+      if (off === -2)             return CF_SLOTS[6];
+      return null;
+    }
+    function _cfOpFor(off) {
+      if (off === 0)             return CF_OPS[0];
+      if (off >= 1 && off <= 4) return CF_OPS[off];
+      if (off === -1)            return CF_OPS[5];
+      if (off === -2)            return CF_OPS[6];
+      return 0;
+    }
+
+    function _cfSyncTargets() {
+      _cfMeshes.forEach((mesh, i) => {
+        if (_cfDepart.idx === i && _cfDepart.target) {
+          _cfTargets[i] = { ..._cfDepart.target };
+          mesh.renderOrder = 30;
+          return;
+        }
+        const off  = i - _cfIndex;
+        const slot = _cfSlotFor(off);
+        mesh.renderOrder = slot ? Math.max(0, 10 - Math.abs(off)) : 0;
+        _cfTargets[i] = slot
+          ? { x: slot.x, y: slot.y, z: slot.z, ry: slot.ry, sc: slot.sc, op: _cfOpFor(off) }
+          : { x: _cfTargets[i]?.x ?? 0, y: -20, z: -80, ry: 0, sc: 0.01, op: 0 };
+      });
+    }
+
+    function _cfSnap() {
+      _cfMeshes.forEach((mesh, i) => {
+        const t = _cfTargets[i];
+        mesh.position.set(t.x, t.y, t.z);
+        mesh.rotation.y = t.ry;
+        mesh.scale.setScalar(t.sc);
+        mesh.material.opacity = t.op;
+      });
+    }
+
+    function _cfUpdateUI() {
+      const cur = _cfData[_cfIndex];
+      if (!cur) return;
+      document.getElementById("cf-title").textContent = cur.titulo;
+      document.getElementById("cf-sub").textContent   = `${cur.juego} · ${cur.visitas || 0} visitas`;
+      document.getElementById("cf-prev").disabled = _cfIndex === 0;
+      document.getElementById("cf-next").disabled = _cfIndex === _cfData.length - 1;
+      document.querySelectorAll(".cf-dot").forEach((d, i) =>
+        d.classList.toggle("active", i === _cfIndex)
+      );
+    }
 
     function buildCoverflow(imgs) {
-      _cfData = imgs;
+      _cfData  = imgs;
       _cfIndex = 0;
-      const stage = document.getElementById("cf-stage");
-      stage.innerHTML = imgs.map((img, i) => `
-        <div class="cf-item" data-idx="${i}" data-id="${img.id}">
-          <img src="${img.filename}" alt="${img.titulo}" loading="lazy" onerror="this.style.display='none'">
-          <div class="cf-overlay">
-            <div class="cf-overlay-title">${img.titulo}</div>
-            <span class="juego-badge ${img.juego}" style="margin-top:0.2rem;font-size:0.65rem">${img.juego}</span>
-          </div>
-        </div>
-      `).join("");
 
+      if (_cfRafId)    { cancelAnimationFrame(_cfRafId); _cfRafId = null; }
+      if (_cfRenderer) { _cfRenderer.dispose(); _cfRenderer = null; }
+      _cfMeshes  = [];
+      _cfTargets = [];
+      _cfDepart  = { idx: -1, target: null };
+
+      const stage   = document.getElementById("cf-stage");
+      stage.innerHTML = "";
+
+      const mobile = window.innerWidth < 640;
+      const W = stage.clientWidth || (mobile ? 340 : 780);
+      const H = mobile ? 240 : 390;
+      stage.style.height = H + "px";
+
+      const renderer = new THREE.WebGLRenderer({ antialias: true, alpha: true });
+      renderer.setSize(W, H);
+      renderer.setPixelRatio(Math.min(window.devicePixelRatio, 2));
+      renderer.setClearColor(0x000000, 0);
+      renderer.sortObjects = true;
+      stage.appendChild(renderer.domElement);
+      _cfRenderer = renderer;
+
+      const scene = new THREE.Scene();
+      scene.fog   = new THREE.FogExp2(0x05050a, 0.038);
+
+      const cam = new THREE.PerspectiveCamera(56, W / H, 0.1, 80);
+      cam.position.set(0, mobile ? 1.6 : 2.3, mobile ? 5.5 : 7.8);
+      cam.lookAt(1.8, 0.5, -2);
+      _cfCamera = cam;
+
+      // Subtle orange glow behind active slot
+      const glow = new THREE.PointLight(0xff6b00, 2.2, 16);
+      glow.position.set(0, 2, 3);
+      scene.add(glow);
+
+      const BW = mobile ? 2.3 : 3.65;
+      const BH = mobile ? 1.73 : 2.74;
+      const loader = new THREE.TextureLoader();
+
+      imgs.forEach((img) => {
+        const mat  = new THREE.MeshBasicMaterial({ transparent: true, opacity: 0, depthWrite: false });
+        const mesh = new THREE.Mesh(new THREE.PlaneGeometry(BW, BH), mat);
+        mesh.position.set(0, -20, -80);
+        scene.add(mesh);
+        _cfMeshes.push(mesh);
+        _cfTargets.push({ x: 0, y: -20, z: -80, ry: 0, sc: 0.01, op: 0 });
+        loader.load(img.filename, (tex) => {
+          tex.colorSpace = THREE.SRGBColorSpace;
+          mat.map = tex;
+          mat.needsUpdate = true;
+        });
+      });
+
+      _cfSyncTargets();
+      _cfSnap();
+      _cfUpdateUI();
+
+      // Dots
       const dotsEl = document.getElementById("cf-dots");
       dotsEl.innerHTML = imgs.map((_, i) =>
         `<div class="cf-dot${i === 0 ? " active" : ""}" data-idx="${i}"></div>`
@@ -997,70 +1119,110 @@
         dot.addEventListener("click", () => goToCf(parseInt(dot.dataset.idx)))
       );
 
-      stage.querySelectorAll(".cf-item").forEach(item =>
-        item.addEventListener("click", () => {
-          const idx = parseInt(item.dataset.idx);
-          if (idx === _cfIndex) {
-            fetchImagen(item.dataset.id).then(img => {
-              document.getElementById("trending-toggle-btn").click();
-              openLightbox(img);
-            }).catch(() => {});
-          } else {
-            goToCf(idx);
-          }
-        })
-      );
+      // Arrows
+      document.getElementById("cf-prev").onclick = () => goToCf(_cfIndex - 1);
+      document.getElementById("cf-next").onclick = () => goToCf(_cfIndex + 1);
 
-      document.getElementById("cf-prev").addEventListener("click", () => goToCf(_cfIndex - 1));
-      document.getElementById("cf-next").addEventListener("click", () => goToCf(_cfIndex + 1));
-
+      // Keyboard
       document.addEventListener("keydown", (e) => {
         if (!_trendingVisible) return;
         if (e.key === "ArrowLeft")  goToCf(_cfIndex - 1);
         if (e.key === "ArrowRight") goToCf(_cfIndex + 1);
       });
 
-      updateCoverflow();
-    }
-
-    function updateCoverflow() {
-      const items = [...document.querySelectorAll(".cf-item")];
-      items.forEach((item, i) => {
-        const offset = i - _cfIndex;
-        const absOff = Math.abs(offset);
-        if (offset === 0) {
-          item.style.transform = "translateX(0px) rotateY(0deg) scale(1)";
-          item.style.opacity   = "1";
-          item.style.zIndex    = "10";
-          item.classList.add("cf-active");
+      // Click/tap on canvas → raycaster
+      const ray = new THREE.Raycaster();
+      renderer.domElement.addEventListener("click", (e) => {
+        const r   = renderer.domElement.getBoundingClientRect();
+        ray.setFromCamera({
+          x:  ((e.clientX - r.left) / r.width)  * 2 - 1,
+          y: -((e.clientY - r.top)  / r.height) * 2 + 1,
+        }, cam);
+        const hits = ray.intersectObjects(_cfMeshes);
+        if (!hits.length) return;
+        const hi = _cfMeshes.indexOf(hits[0].object);
+        if (hi - _cfIndex === 0) {
+          fetchImagen(_cfData[hi].id).then(full => {
+            document.getElementById("trending-toggle-btn").click();
+            openLightbox(full);
+          }).catch(() => {});
         } else {
-          const dir = offset > 0 ? 1 : -1;
-          const tx  = dir * (185 + (absOff - 1) * 40);
-          const ry  = dir * 52;
-          const sc  = Math.max(0.66 - (absOff - 1) * 0.1, 0.2);
-          const op  = Math.max(0.5 - (absOff - 1) * 0.15, 0.05);
-          item.style.transform = `translateX(${tx}px) rotateY(${ry}deg) scale(${sc})`;
-          item.style.opacity   = String(op);
-          item.style.zIndex    = String(Math.max(10 - absOff, 0));
-          item.classList.remove("cf-active");
+          goToCf(hi);
         }
       });
 
-      const cur = _cfData[_cfIndex];
-      if (cur) {
-        document.getElementById("cf-title").textContent = cur.titulo;
-        document.getElementById("cf-sub").textContent   = `${cur.juego} · ${cur.visitas || 0} visitas`;
-      }
-      document.querySelectorAll(".cf-dot").forEach((d, i) =>
-        d.classList.toggle("active", i === _cfIndex)
-      );
-      document.getElementById("cf-prev").disabled = _cfIndex === 0;
-      document.getElementById("cf-next").disabled = _cfIndex === _cfData.length - 1;
+      // Touch swipe
+      let _tx0 = null;
+      renderer.domElement.addEventListener("touchstart", e => { _tx0 = e.touches[0].clientX; }, { passive: true });
+      renderer.domElement.addEventListener("touchend",   e => {
+        if (_tx0 === null) return;
+        const dx = e.changedTouches[0].clientX - _tx0;
+        if (Math.abs(dx) > 38) goToCf(_cfIndex + (dx < 0 ? 1 : -1));
+        _tx0 = null;
+      }, { passive: true });
+
+      // Resize
+      window.addEventListener("resize", _cfOnResize);
+
+      // Render loop
+      _cfPaused = false;
+      (function tick() {
+        _cfRafId = requestAnimationFrame(tick);
+        if (_cfPaused) return;
+        const L = 0.07;
+        _cfMeshes.forEach((mesh, i) => {
+          const t = _cfTargets[i];
+          mesh.position.x         += (t.x  - mesh.position.x)         * L;
+          mesh.position.y         += (t.y  - mesh.position.y)         * L;
+          mesh.position.z         += (t.z  - mesh.position.z)         * L;
+          mesh.rotation.y         += (t.ry - mesh.rotation.y)         * L;
+          mesh.scale.x            += (t.sc - mesh.scale.x)            * L;
+          mesh.scale.y            += (t.sc - mesh.scale.y)            * L;
+          mesh.material.opacity   += (t.op - mesh.material.opacity)   * L;
+        });
+        // glow follows active image subtly
+        const am = _cfMeshes[_cfIndex];
+        if (am) glow.position.x += (am.position.x - glow.position.x) * 0.04;
+        renderer.render(scene, cam);
+      })();
     }
 
-    function goToCf(idx) {
-      _cfIndex = Math.max(0, Math.min(_cfData.length - 1, idx));
-      updateCoverflow();
+    function _cfOnResize() {
+      if (!_cfRenderer || !_cfCamera) return;
+      const stage = document.getElementById("cf-stage");
+      if (!stage) return;
+      const mobile = window.innerWidth < 640;
+      const W = stage.clientWidth;
+      const H = mobile ? 240 : 390;
+      stage.style.height = H + "px";
+      _cfRenderer.setSize(W, H);
+      _cfCamera.aspect = W / H;
+      _cfCamera.updateProjectionMatrix();
+    }
+
+    function goToCf(newIdx) {
+      newIdx = Math.max(0, Math.min(_cfData.length - 1, newIdx));
+      if (newIdx === _cfIndex) return;
+
+      const goingNext = newIdx > _cfIndex;
+      _cfDepart.idx    = _cfIndex;
+      _cfDepart.target = goingNext
+        ? { x: -4.8, y: 2.2, z: 5.8, ry: -0.9, sc: 1.7, op: 0 }
+        : { x:  4.8, y: 2.2, z: 5.8, ry:  0.9, sc: 1.7, op: 0 };
+
+      _cfIndex = newIdx;
+      _cfSyncTargets();
+      _cfUpdateUI();
+
+      const gen = ++_cfDepartGen;
+      const di  = _cfDepart.idx;
+      setTimeout(() => {
+        if (_cfDepartGen !== gen) return;
+        const m = _cfMeshes[di];
+        if (m) { m.position.set(0, -20, -80); m.material.opacity = 0; m.scale.setScalar(0.01); }
+        _cfDepart = { idx: -1, target: null };
+        _cfSyncTargets();
+      }, 720);
     }
 
     async function loadTrending() {
@@ -1099,9 +1261,11 @@
         tagBar.style.display = "none";
         document.getElementById("count-label").style.display = "none";
         await loadTrending();
+        _cfPaused = false;
       } else {
         btn.classList.remove("active");
         btn.textContent = "🔥 Trending";
+        _cfPaused = true;
         panel.style.display = "none";
         gallery.style.display = "";
         sentinel.style.display = "";
