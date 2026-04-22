@@ -1,9 +1,9 @@
-const CACHE = "forza-gallery-v1";
+const CACHE = "forza-gallery-v2";
 const STATIC = [
   "/",
   "/index.html",
   "/galeria.html",
-  "/css/style.css?v=10",
+  "/css/style.css?v=14",
   "/js/api.js?v=6",
   "/js/toast.js",
   "/img/default-avatar.svg",
