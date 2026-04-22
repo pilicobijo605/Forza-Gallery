@@ -1,0 +1,20 @@
+{
+  "appId": "com.forzagallery.app",
+  "appName": "Forza Gallery",
+  "webDir": "static",
+  "server": {
+    "url": "https://forza-gallery-production.up.railway.app",
+    "cleartext": false
+  },
+  "plugins": {
+    "SplashScreen": {
+      "launchShowDuration": 2000,
+      "launchAutoHide": true,
+      "fadeOutDuration": 600,
+      "backgroundColor": "#0a0a0f",
+      "androidSplashResourceName": "splash",
+      "splashFullScreen": true,
+      "splashImmersive": true
+    }
+  }
+}
