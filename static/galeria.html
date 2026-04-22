@@ -1252,6 +1252,7 @@
       if (_trendingVisible) {
         btn.classList.add("active");
         btn.textContent = "← Galería";
+        document.querySelector(".page-title").textContent = "Trending";
         panel.style.display = "block";
         gallery.style.display = "none";
         sentinel.style.display = "none";
@@ -1264,6 +1265,7 @@
       } else {
         btn.classList.remove("active");
         btn.textContent = "🔥 Trending";
+        document.querySelector(".page-title").textContent = "Galería";
         _cfPaused = true;
         panel.style.display = "none";
         gallery.style.display = "";
