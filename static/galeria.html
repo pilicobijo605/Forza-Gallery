@@ -984,18 +984,20 @@
     let _cfDepartGen = 0;
     let _cfDepart    = { idx: -1, target: null };
 
-    // Scattered layout: big center + thumbnails floating around it
+    // Circuito oval: R=3.5, paso 38° por slot, cámara al final de la recta
+    // Los "coches" siguen la curva: el activo está en primera plana,
+    // los demás se alejan por el lado derecho y reaparecen por la izquierda
     const CF_SLOTS = [
-      { x:  0,    y:  0,    z:  0,    ry:  0,     rz:  0,     sc: 1    },  // 0 active
-      { x:  3.0,  y:  0.2,  z: -0.5,  ry: -0.08,  rz: -0.06,  sc: 0.38 },  // +1 right
-      { x:  3.3,  y: -0.9,  z: -1.2,  ry: -0.14,  rz: -0.10,  sc: 0.28 },  // +2 right-low
-      { x:  1.8,  y:  2.2,  z: -1.0,  ry: -0.06,  rz:  0.09,  sc: 0.30 },  // +3 top-right
-      { x:  3.8,  y:  1.9,  z: -1.8,  ry: -0.10,  rz: -0.07,  sc: 0.23 },  // +4 top-far
-      { x: -3.0,  y:  0.2,  z: -0.5,  ry:  0.08,  rz:  0.06,  sc: 0.38 },  // -1 left
-      { x: -3.3,  y: -0.9,  z: -1.2,  ry:  0.14,  rz:  0.10,  sc: 0.28 },  // -2 left-low
-      { x: -1.8,  y:  2.2,  z: -1.0,  ry:  0.06,  rz: -0.09,  sc: 0.30 },  // -3 top-left
+      { x:  0,     y: 0, z:  0,     ry:  0,      rz: 0, sc: 1.00 },  // 0  — líder en recta
+      { x:  2.15,  y: 0, z: -0.72,  ry: -0.361,  rz: 0, sc: 0.62 },  // +1
+      { x:  3.50,  y: 0, z: -2.62,  ry: -0.722,  rz: 0, sc: 0.44 },  // +2
+      { x:  3.60,  y: 0, z: -5.00,  ry: -1.083,  rz: 0, sc: 0.31 },  // +3
+      { x:  2.41,  y: 0, z: -7.00,  ry: -1.444,  rz: 0, sc: 0.21 },  // +4
+      { x: -2.15,  y: 0, z: -0.72,  ry:  0.361,  rz: 0, sc: 0.62 },  // -1
+      { x: -3.50,  y: 0, z: -2.62,  ry:  0.722,  rz: 0, sc: 0.44 },  // -2
+      { x: -3.60,  y: 0, z: -5.00,  ry:  1.083,  rz: 0, sc: 0.31 },  // -3
     ];
-    const CF_OPS = [1, 0.88, 0.68, 0.58, 0.40, 0.88, 0.68, 0.58];
+    const CF_OPS = [1, 0.92, 0.74, 0.54, 0.32, 0.92, 0.74, 0.54];
 
     function _cfSlotFor(off) {
       if (off === 0)              return CF_SLOTS[0];
@@ -1082,8 +1084,8 @@
       const scene = new THREE.Scene();
 
       const cam = new THREE.PerspectiveCamera(52, W / H, 0.1, 50);
-      cam.position.set(0, 0, mobile ? 4.5 : 6);
-      cam.lookAt(0, 0, 0);
+      cam.position.set(0, mobile ? 1.2 : 1.5, mobile ? 4.5 : 5.5);
+      cam.lookAt(0, 0.3, -0.5);
       _cfCamera = cam;
 
       const BW = mobile ? 3.2 : 7.0;
@@ -1202,9 +1204,10 @@
 
       const goingNext = newIdx > _cfIndex;
       _cfDepart.idx    = _cfIndex;
+      // El coche líder pasa a cámara: zoom hacia el objetivo y se desvanece
       _cfDepart.target = goingNext
-        ? { x: -7,  y: -1.5, z: -2, ry: 0.15,  rz:  0.20, sc: 0.10, op: 0 }
-        : { x:  7,  y: -1.5, z: -2, ry: -0.15, rz: -0.20, sc: 0.10, op: 0 };
+        ? { x: -0.8, y: 0.5, z: 4.2, ry:  0.10, rz: 0, sc: 3.5, op: 0 }
+        : { x:  0.8, y: 0.5, z: 4.2, ry: -0.10, rz: 0, sc: 3.5, op: 0 };
 
       _cfIndex = newIdx;
       _cfSyncTargets();

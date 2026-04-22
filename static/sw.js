@@ -1,4 +1,4 @@
-const CACHE = "forza-gallery-v3";
+const CACHE = "forza-gallery-v4";
 const STATIC = [
   "/",
   "/index.html",
